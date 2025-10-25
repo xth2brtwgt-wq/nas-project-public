@@ -1,0 +1,95 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment variables - 公開版では機密情報を除外
+.env
+.env.local
+.env.production
+.env.*.local
+.env.backup*
+env.production.local
+*.env
+!env.example
+!env.local.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+*.backup*
+
+# 機密情報を含むファイル
+google-credentials.json
+*.crt
+*.key
+*.pem
+*.p12
+*.pfx
+
+# データディレクトリ（個人データ）
+data/
+uploads/
+processed/
+exports/
+cache/
+transcripts/
+meeting-minutes-byc.backup_*
+meeting-minutes-byc.current_backup_*
+document-automation/data/
+
+# プロジェクト固有の除外
+nas-dashboard/app.py.backup*
+meeting-minutes-byc-dev.zip
+
+# Docker
+.dockerignore
+
+# セキュリティ関連
+fail2ban/
+*.local

@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  PROJECT_NAME:
+    build: .
+    image: PROJECT_NAME:latest
+    container_name: PROJECT_NAME
+    ports:
+      - "EXTERNAL_PORT:5000"  # 外部ポート:内部ポート
+    volumes:
+      # 永続化データディレクトリ（データのみ）
+      - /home/AdminUser/PROJECT_NAME-data/uploads:/app/uploads
+      - /home/AdminUser/PROJECT_NAME-data/transcripts:/app/transcripts
+      # ログディレクトリ
+      - /home/AdminUser/PROJECT_NAME-data/logs:/app/logs
+      # 注意: templatesはマウントしない（アプリケーション更新時に問題が発生するため）
+      # 必要に応じて、デプロイスクリプトで手動更新
+    env_file:
+      - .env
+    environment:
+      - FLASK_ENV=production
+      - FLASK_DEBUG=False
+      - UPLOAD_DIR=/app/uploads
+      - TRANSCRIPT_DIR=/app/transcripts
+      - TEMPLATES_DIR=/app/templates
+      - HOST=0.0.0.0
+      - PORT=5000
+      - TZ=Asia/Tokyo
+    restart: unless-stopped
+    labels:
+      - "com.docker.compose.project=PROJECT_NAME"
+      - "com.docker.compose.service=PROJECT_NAME"
+      - "com.centurylinklabs.watchtower.enable=true"
+    networks:
+      - nas-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  nas-network:
+    external: true

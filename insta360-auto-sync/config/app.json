@@ -1,0 +1,39 @@
+{
+  "app": {
+    "name": "Insta360自動同期システム",
+    "version": "1.0.0",
+    "timezone": "Asia/Tokyo"
+  },
+  "sync": {
+    "source_path": "/source",
+    "destination_path": "/volume2/data/insta360",
+    "file_patterns": [
+      "VID_*.mp4",
+      "*.insv",
+      "*.insp",
+      "*.jpg",
+      "*.dng",
+      "*.raw"
+    ],
+    "schedule": "0 0 * * *",
+    "delete_source": false,
+    "delete_empty_dirs": true
+  },
+  "mac": {
+    "ip_address": "192.168.68.88",
+    "username": "Admin",
+    "password": "",
+    "share_name": "Insta360"
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    "file": "logs/insta360_sync.log",
+    "max_days": 30
+  },
+  "notification": {
+    "send_success": true,
+    "send_error": true,
+    "send_no_files": false
+  }
+}

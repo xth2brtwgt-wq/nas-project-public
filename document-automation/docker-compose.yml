@@ -1,0 +1,130 @@
+
+services:
+  # Web UI & API
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    container_name: doc-automation-web
+    ports:
+      - "8080:8080"
+    volumes:
+      - /home/AdminUser/nas-project-data/document-automation/uploads:/app/uploads
+      - /home/AdminUser/nas-project-data/document-automation/processed:/app/processed
+      - /home/AdminUser/nas-project-data/document-automation/exports:/app/exports
+      - /home/AdminUser/nas-project-data/document-automation/cache:/app/cache
+    environment:
+      - DATABASE_URL=postgresql://docuser:docpass@db:5432/document_automation
+      - REDIS_URL=redis://redis:6379/0
+      - QDRANT_URL=http://qdrant:6333
+      - UPLOAD_DIR=/app/uploads
+      - PROCESSED_DIR=/app/processed
+      - EXPORT_DIR=/app/exports
+      - CACHE_DIR=/app/cache
+      - PYTHONUNBUFFERED=1
+      - TZ=Asia/Tokyo
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+      - qdrant
+    restart: unless-stopped
+    networks:
+      - doc-automation-network
+
+  # Celery Worker (非同期処理)
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: doc-automation-worker
+    volumes:
+      - /home/AdminUser/nas-project-data/document-automation/uploads:/app/uploads
+      - /home/AdminUser/nas-project-data/document-automation/processed:/app/processed
+      - /home/AdminUser/nas-project-data/document-automation/exports:/app/exports
+      - /home/AdminUser/nas-project-data/document-automation/cache:/app/cache
+    environment:
+      - DATABASE_URL=postgresql://docuser:docpass@db:5432/document_automation
+      - REDIS_URL=redis://redis:6379/0
+      - QDRANT_URL=http://qdrant:6333
+      - OCR_LANGUAGE=jpn,eng
+      - TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
+      - PYTHONUNBUFFERED=1
+      - TZ=Asia/Tokyo
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+      - qdrant
+    restart: unless-stopped
+    networks:
+      - doc-automation-network
+    # 軽量構成：メモリ制限
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+  # Redis (タスクキュー & キャッシュ)
+  redis:
+    image: redis:7-alpine
+    container_name: doc-automation-redis
+    # ports:
+      # - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+    restart: unless-stopped
+    networks:
+      - doc-automation-network
+
+  # PostgreSQL (メタデータ管理)
+  db:
+    image: postgres:15-alpine
+    container_name: doc-automation-db
+    environment:
+      - POSTGRES_DB=document_automation
+      - POSTGRES_USER=docuser
+      - POSTGRES_PASSWORD=docpass
+      - TZ=Asia/Tokyo
+      - PGTZ=Asia/Tokyo
+    volumes:
+      - /home/AdminUser/nas-project-data/document-automation/db:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"  # 既存のPostgreSQLと被らないように
+    restart: unless-stopped
+    networks:
+      - doc-automation-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  # Qdrant (ベクトルデータベース)
+  qdrant:
+    image: qdrant/qdrant:v1.7.0
+    container_name: doc-automation-qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - /home/AdminUser/nas-project-data/document-automation/qdrant:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    restart: unless-stopped
+    networks:
+      - doc-automation-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+networks:
+  doc-automation-network:
+    driver: bridge
+
+volumes:
+  redis_data:
+

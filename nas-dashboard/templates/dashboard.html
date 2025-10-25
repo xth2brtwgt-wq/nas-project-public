@@ -1,0 +1,1691 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NAS統合管理ダッシュボード</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js (現在は使用していません) -->
+    <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
+    
+    <style>
+        .dashboard-card {
+            transition: transform 0.2s;
+            border: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        
+        .service-card {
+            height: 100%;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        .status-running { background-color: #28a745; }
+        .status-stopped { background-color: #dc3545; }
+        .status-warning { background-color: #ffc107; }
+        .status-error { background-color: #dc3545; }
+        
+        .metric-card {
+            text-align: center;
+            padding: 1.5rem;
+        }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .metric-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+        
+        .navbar-brand {
+            font-weight: bold;
+        }
+        
+        .refresh-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        /* ログ表示用スタイル */
+        .log-content {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            line-height: 1.4;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .log-info {
+            color: #212529;
+        }
+        
+        .log-warning {
+            color: #856404;
+            background-color: #fff3cd;
+            padding: 0.125rem 0.25rem;
+            border-radius: 0.25rem;
+        }
+        
+        .log-error {
+            color: #721c24;
+            background-color: #f8d7da;
+            padding: 0.125rem 0.25rem;
+            border-radius: 0.25rem;
+        }
+        
+        .log-debug {
+            color: #6c757d;
+            font-style: italic;
+        }
+        
+        .log-file-info {
+            background-color: #e9ecef;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        
+        .log-file-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .log-file-stats {
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <!-- ナビゲーションバー -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-tachometer-alt me-2"></i>
+                NAS統合管理ダッシュボード
+                <small class="ms-2 text-light opacity-75">v{{ version.version }}</small>
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text me-3">
+                    <i class="fas fa-info-circle me-1"></i>
+                    <span class="version-info" data-bs-toggle="tooltip" data-bs-placement="bottom" 
+                          title="Build: {{ version.build_date }} | Author: {{ version.author }}">
+                        {{ version.description }}
+                    </span>
+                </span>
+                <span class="navbar-text">
+                    <i class="fas fa-clock me-1"></i>
+                    <span id="current-time"></span>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- システム監視 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2><i class="fas fa-server me-2"></i>システム監視</h2>
+            </div>
+        </div>
+
+        <!-- システムメトリクス -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card dashboard-card metric-card">
+                    <div class="card-body">
+                        <div class="metric-value text-primary" id="cpu-percent">--</div>
+                        <div class="metric-label">CPU使用率</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card dashboard-card metric-card">
+                    <div class="card-body">
+                        <div class="metric-value text-success" id="memory-percent">--</div>
+                        <div class="metric-label">メモリ使用率</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card dashboard-card metric-card">
+                    <div class="card-body">
+                        <div class="metric-value text-warning" id="disk-percent">--</div>
+                        <div class="metric-label">ディスク使用率</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card dashboard-card metric-card">
+                    <div class="card-body">
+                        <div class="metric-value text-info" id="uptime">--</div>
+                        <div class="metric-label">稼働時間</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- サービス一覧 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2><i class="fas fa-cogs me-2"></i>サービス管理</h2>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            {% for service_id, service in services.items() %}
+            <div class="col-md-4 mb-3">
+                <div class="card dashboard-card service-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="card-title">
+                                <i class="{{ service.icon }} text-{{ service.color }} me-2"></i>
+                                {{ service.name }}
+                            </h5>
+                            <span class="status-indicator" id="status-{{ service_id }}"></span>
+                        </div>
+                        <p class="card-text text-muted">{{ service.description }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted" id="response-time-{{ service_id }}">--</small>
+                            {% if service.url == '#' %}
+                                {% if service_id == 'insta360_sync' %}
+                                <button onclick="scrollToInsta360()" class="btn btn-{{ service.color }} btn-sm">
+                                    <i class="fas fa-cog me-1"></i>
+                                    制御
+                                </button>
+                                {% elif service_id == 'fail2ban' %}
+                                <button onclick="scrollToFail2Ban()" class="btn btn-{{ service.color }} btn-sm">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    詳細
+                                </button>
+                                {% endif %}
+                            {% else %}
+                            <a href="{{ service.url }}" target="_blank" class="btn btn-{{ service.color }} btn-sm">
+                                <i class="fas fa-external-link-alt me-1"></i>
+                                アクセス
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Insta360自動同期監視 -->
+        <div class="row mb-4" id="insta360-section">
+            <div class="col-12">
+                <h2><i class="fas fa-camera me-2"></i>Insta360自動同期監視</h2>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card dashboard-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="fas fa-chart-line me-2"></i>システム状態</h5>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="refreshInsta360Status()">
+                            <i class="fas fa-sync-alt me-1"></i>
+                            更新
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="insta360-status">
+                            <div class="text-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">読み込み中...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card dashboard-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="fas fa-wrench me-2"></i>接続テスト</h5>
+                        <button class="btn btn-outline-info btn-sm" onclick="testInsta360Connection()">
+                            <i class="fas fa-plug me-1"></i>
+                            テスト
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="insta360-test-status">
+                            <p class="text-muted">システムの接続状態をテストします。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Fail2Ban監視 -->
+        <div class="row mb-4" id="fail2ban-section">
+            <div class="col-12">
+                <h2><i class="fas fa-shield-alt me-2"></i>セキュリティ監視</h2>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card dashboard-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="fas fa-ban me-2"></i>Fail2Ban状況</h5>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="refreshFail2BanStatus()">
+                            <i class="fas fa-sync-alt me-1"></i>
+                            更新
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="fail2ban-status">
+                            <div class="text-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">読み込み中...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card dashboard-card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-list me-2"></i>jail詳細情報</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="fail2ban-jails">
+                            <div class="text-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">読み込み中...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card dashboard-card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-chart-line me-2"></i>セキュリティ統計</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="fail2ban-stats">
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <div class="metric-value text-danger" id="total-banned">--</div>
+                                    <div class="metric-label">総BAN数</div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="metric-value text-warning" id="active-jails">--</div>
+                                    <div class="metric-label">アクティブjail</div>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="text-center">
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>
+                                    最終更新: <span id="last-update">--</span>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card dashboard-card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-unlock me-2"></i>BAN解除</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="unban-form">
+                            <div class="mb-3">
+                                <label for="unban-ip" class="form-label">IPアドレス</label>
+                                <input type="text" class="form-control" id="unban-ip" placeholder="例: 192.168.1.100" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="unban-jail" class="form-label">jail（オプション）</label>
+                                <select class="form-select" id="unban-jail">
+                                    <option value="all">全jailから解除</option>
+                                    <option value="sshd">sshd</option>
+                                    <option value="nginx-http-auth">nginx-http-auth</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-warning btn-sm">
+                                <i class="fas fa-unlock me-1"></i>
+                                BAN解除
+                            </button>
+                        </form>
+                        <div id="unban-result" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BAN履歴 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card dashboard-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="fas fa-history me-2"></i>BAN履歴</h5>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="refreshBanHistory()">
+                            <i class="fas fa-sync-alt me-1"></i>
+                            更新
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="ban-history">
+                            <div class="text-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">読み込み中...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+        <!-- バックアップ管理 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2><i class="fas fa-database me-2"></i>バックアップ管理</h2>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card dashboard-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="fas fa-plus me-2"></i>バックアップ作成</h5>
+                        <button class="btn btn-primary btn-sm" onclick="createBackup()">
+                            <i class="fas fa-play me-1"></i>
+                            作成開始
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="backup-status">
+                            <p class="text-muted">バックアップを作成するには「作成開始」ボタンをクリックしてください。</p>
+                        </div>
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                プロジェクト全体のバックアップを作成します
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card dashboard-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="fas fa-history me-2"></i>バックアップ履歴</h5>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="refreshBackupList()">
+                            <i class="fas fa-sync-alt me-1"></i>
+                            更新
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="backup-list">
+                            <div class="text-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">読み込み中...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card dashboard-card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-chart-pie me-2"></i>バックアップ統計</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="backup-stats">
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <div class="metric-value text-primary" id="total-backups">--</div>
+                                    <div class="metric-label">総バックアップ数</div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="metric-value text-success" id="total-size">--</div>
+                                    <div class="metric-label">総サイズ</div>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="text-center">
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>
+                                    最終バックアップ: <span id="last-backup">--</span>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ログ監視 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2><i class="fas fa-file-alt me-2"></i>ログ監視</h2>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card dashboard-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-file-alt fa-3x text-primary mb-3"></i>
+                        <h5 class="card-title">システムログ監視</h5>
+                        <p class="card-text">全プロジェクトとDockerコンテナのログを統合監視</p>
+                        <a href="/logs" class="btn btn-primary">
+                            <i class="fas fa-external-link-alt me-1"></i>
+                            ログ監視画面を開く
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card dashboard-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-chart-line fa-3x text-success mb-3"></i>
+                        <h5 class="card-title">ログ分析機能</h5>
+                        <p class="card-text">ログレベル別フィルタリング、リアルタイム更新</p>
+                        <a href="/logs" class="btn btn-success">
+                            <i class="fas fa-chart-bar me-1"></i>
+                            詳細分析
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- レポート管理 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2><i class="fas fa-file-alt me-2"></i>レポート管理</h2>
+            </div>
+        </div>
+
+        <!-- 週次レポート -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card dashboard-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="fas fa-calendar-week me-2"></i>週次レポート</h5>
+                        <div class="btn-group">
+                            <button class="btn btn-success btn-sm" onclick="generateWeeklyReport(false)">
+                                <i class="fas fa-play me-1"></i>
+                                生成開始
+                            </button>
+                            <button class="btn btn-primary btn-sm" onclick="generateWeeklyReport(true)">
+                                <i class="fas fa-envelope me-1"></i>
+                                生成&送信
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="report-status">
+                            <p class="text-muted">週次レポートを生成するには「生成開始」ボタンをクリックしてください。メール送信も行う場合は「生成&送信」ボタンを使用してください。</p>
+                        </div>
+                        <div id="report-content" style="display: none;">
+                            <hr>
+                            <h6><i class="fas fa-file-alt me-2"></i>レポート内容</h6>
+                            <div class="report-display">
+                                <pre id="report-text" class="bg-light p-3 rounded" style="white-space: pre-wrap; font-size: 0.9em; max-height: 400px; overflow-y: auto;"></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 月次AI分析レポート -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card dashboard-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="fas fa-robot me-2"></i>月次AI分析レポート</h5>
+                        <div class="btn-group">
+                            <button class="btn btn-info btn-sm" onclick="generateMonthlyReport(false)">
+                                <i class="fas fa-brain me-1"></i>
+                                AI分析開始
+                            </button>
+                            <button class="btn btn-warning btn-sm" onclick="generateMonthlyReport(true)">
+                                <i class="fas fa-envelope me-1"></i>
+                                AI分析&送信
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="monthly-report-status">
+                            <p class="text-muted">
+                                <i class="fas fa-robot me-1"></i>
+                                月次AI分析レポートを生成するには「AI分析開始」ボタンをクリックしてください。Gemini AIによる包括的なセキュリティ分析と推奨事項が含まれます。
+                            </p>
+                        </div>
+                        <div id="monthly-report-content" style="display: none;">
+                            <hr>
+                            <h6><i class="fas fa-brain me-2"></i>AI分析結果</h6>
+                            <div class="monthly-report-display">
+                                <pre id="monthly-report-text" class="bg-light p-3 rounded" style="white-space: pre-wrap; font-size: 0.9em; max-height: 400px; overflow-y: auto;"></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 更新ボタン -->
+    <button class="btn btn-primary refresh-btn" onclick="refreshAll()" title="全データを更新">
+        <i class="fas fa-sync-alt"></i>
+    </button>
+
+    <!-- バージョン情報セクション -->
+    <div class="container-fluid mt-5">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-code-branch me-2"></i>バージョン情報</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>現在のバージョン</h6>
+                                <p class="mb-1"><strong>バージョン:</strong> v{{ version.version }}</p>
+                                <p class="mb-1"><strong>ビルド日:</strong> {{ version.build_date }}</p>
+                                <p class="mb-1"><strong>作者:</strong> {{ version.author }}</p>
+                                <p class="mb-0"><strong>説明:</strong> {{ version.description }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>システム情報</h6>
+                                <p class="mb-1"><strong>稼働環境:</strong> {{ 'NAS環境' if version.build_date else 'ローカル環境' }}</p>
+                                <p class="mb-1"><strong>最終更新:</strong> {{ version.build_date }}</p>
+                                <p class="mb-0"><strong>ステータス:</strong> <span class="badge bg-success">稼働中</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // グローバル変数
+        let refreshInterval = null;
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCurrentTime();
+            refreshAll();
+            
+            // ツールチップの初期化
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+            
+            // 30秒ごとに自動更新
+            window.refreshInterval = setInterval(refreshAll, 30000);
+            
+            // 1秒ごとに時刻更新
+            setInterval(updateCurrentTime, 1000);
+            
+        });
+
+        // 現在時刻を更新
+        function updateCurrentTime() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = now.toLocaleString('ja-JP');
+        }
+
+        // 全データを更新
+        function refreshAll() {
+            updateSystemStatus();
+            updateServicesStatus();
+            updateInsta360Status();
+            updateFail2banStatus();
+            updateFail2BanJails();
+            updateBanHistory();
+            updateBackupList();
+        }
+
+        // システム状態を更新
+        async function updateSystemStatus() {
+            try {
+                const response = await fetch('/api/system/status');
+                const data = await response.json();
+                
+                // 各要素が存在するかチェックしてから更新
+                const cpuElement = document.getElementById('cpu-percent');
+                const memoryElement = document.getElementById('memory-percent');
+                const diskElement = document.getElementById('disk-percent');
+                const uptimeElement = document.getElementById('uptime');
+                
+                if (cpuElement) cpuElement.textContent = data.cpu.percent.toFixed(1) + '%';
+                if (memoryElement) memoryElement.textContent = data.memory.percent.toFixed(1) + '%';
+                if (diskElement) diskElement.textContent = data.disk.percent.toFixed(1) + '%';
+                if (uptimeElement) uptimeElement.textContent = `${data.uptime.days}日 ${data.uptime.hours}時間`;
+                
+                // リソースチャートを更新（要素が存在する場合のみ）
+                // updateResourceChart(data);
+                
+            } catch (error) {
+                console.error('システム状態の取得に失敗:', error);
+            }
+        }
+
+        // サービス状態を更新
+        async function updateServicesStatus() {
+            try {
+                const response = await fetch('/api/services/status');
+                const data = await response.json();
+                
+                for (const [serviceId, serviceData] of Object.entries(data)) {
+                    const statusElement = document.getElementById(`status-${serviceId}`);
+                    const responseTimeElement = document.getElementById(`response-time-${serviceId}`);
+                    
+                    if (statusElement) {
+                        statusElement.className = `status-indicator status-${serviceData.status}`;
+                    }
+                    
+                    if (responseTimeElement && serviceData.response_time) {
+                        responseTimeElement.textContent = `${(serviceData.response_time * 1000).toFixed(0)}ms`;
+                    }
+                }
+                
+            } catch (error) {
+                console.error('サービス状態の取得に失敗:', error);
+            }
+        }
+
+        // Fail2Ban状態を更新
+        async function updateFail2banStatus() {
+            try {
+                const response = await fetch('/api/fail2ban/status');
+                const data = await response.json();
+                
+                // セキュリティ統計を更新
+                updateFail2BanStats(data);
+                
+                const statusElement = document.getElementById('fail2ban-status');
+                
+                if (data.status === 'running') {
+                    let html = `<div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Fail2Banが正常に動作しています
+                    </div>`;
+                    
+                    if (data.jails && Object.keys(data.jails).length > 0) {
+                        html += '<h6>アクティブなJail:</h6><ul class="list-group list-group-flush">';
+                        for (const [jail, info] of Object.entries(data.jails)) {
+                            html += `<li class="list-group-item d-flex justify-content-between">
+                                <span>${jail}</span>
+                                <span class="badge bg-danger">${info.banned_count} BAN</span>
+                            </li>`;
+                        }
+                        html += '</ul>';
+                    }
+                    
+                    html += `<div class="mt-3">
+                        <strong>総BAN数: <span class="badge bg-danger">${data.total_banned}</span></strong>
+                    </div>`;
+                    
+                    statusElement.innerHTML = html;
+                } else {
+                    statusElement.innerHTML = `<div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Fail2Banエラー: ${data.message}
+                    </div>`;
+                }
+                
+            } catch (error) {
+                console.error('Fail2Ban状態の取得に失敗:', error);
+                document.getElementById('fail2ban-status').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Fail2Ban状態の取得に失敗しました
+                    </div>`;
+            }
+        }
+
+        // バックアップ一覧を更新
+        async function updateBackupList() {
+            const listElement = document.getElementById('backup-list');
+            try {
+                const response = await fetch('/api/backup/list');
+                const data = await response.json();
+                
+                if (data.length === 0) {
+                    listElement.innerHTML = '<p class="text-muted">バックアップが見つかりません</p>';
+                    updateBackupStats([]);
+                    return;
+                }
+                
+                let html = '<div class="list-group list-group-flush">';
+                data.slice(0, 5).forEach(backup => {
+                    const sizeMB = (backup.size / (1024 * 1024)).toFixed(2);
+                    const createdDate = new Date(backup.created).toLocaleString('ja-JP');
+                    
+                    html += `<div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${backup.name}</strong><br>
+                            <small class="text-muted">${createdDate} - ${sizeMB}MB</small>
+                        </div>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary btn-sm" onclick="downloadBackup('${backup.name}')" title="ダウンロード">
+                                <i class="fas fa-download"></i>
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" onclick="deleteBackup('${backup.name}')" title="削除">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>`;
+                });
+                html += '</div>';
+                
+                listElement.innerHTML = html;
+                updateBackupStats(data);
+                
+            } catch (error) {
+                console.error('バックアップ一覧の取得に失敗:', error);
+                listElement.innerHTML = '<div class="alert alert-danger">バックアップ一覧の取得に失敗しました</div>';
+            }
+        }
+
+        // バックアップ統計を更新
+        function updateBackupStats(backups) {
+            const totalBackups = backups.length;
+            const totalSize = backups.reduce((sum, backup) => sum + backup.size, 0);
+            const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(1);
+            const lastBackup = backups.length > 0 ? new Date(backups[0].created).toLocaleDateString('ja-JP') : 'なし';
+            
+            document.getElementById('total-backups').textContent = totalBackups;
+            document.getElementById('total-size').textContent = totalSizeMB + 'MB';
+            document.getElementById('last-backup').textContent = lastBackup;
+        }
+
+        // バックアップ一覧を手動更新
+        function refreshBackupList() {
+            updateBackupList();
+        }
+
+        // バックアップをダウンロード
+        function downloadBackup(backupName) {
+            window.open(`/api/backup/download/${encodeURIComponent(backupName)}`, '_blank');
+        }
+
+        // バックアップを削除
+        async function deleteBackup(backupName) {
+            if (!confirm(`バックアップ「${backupName}」を削除しますか？`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/backup/delete/${encodeURIComponent(backupName)}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('バックアップが削除されました');
+                    updateBackupList();
+                } else {
+                    alert('バックアップの削除に失敗しました: ' + data.message);
+                }
+            } catch (error) {
+                console.error('バックアップ削除エラー:', error);
+                alert('バックアップの削除に失敗しました');
+            }
+        }
+
+
+        // リソースチャート機能は現在使用していません
+
+        // バックアップを作成
+        async function createBackup() {
+            const statusElement = document.getElementById('backup-status');
+            statusElement.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div><br>バックアップを作成中...</div>';
+            
+            try {
+                const response = await fetch('/api/backup/create', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    statusElement.innerHTML = `<div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        ${data.message}
+                    </div>`;
+                } else {
+                    statusElement.innerHTML = `<div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ${data.message}
+                    </div>`;
+                }
+                
+                // バックアップ一覧を更新
+                setTimeout(updateBackupList, 1000);
+                
+            } catch (error) {
+                statusElement.innerHTML = `<div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    バックアップの作成に失敗しました
+                </div>`;
+            }
+        }
+
+        // 週次レポートを生成
+        async function generateWeeklyReport(sendEmail = false) {
+            const statusElement = document.getElementById('report-status');
+            const reportContentElement = document.getElementById('report-content');
+            const reportTextElement = document.getElementById('report-text');
+            
+            const loadingMessage = sendEmail ? 
+                '<div class="text-center"><div class="spinner-border" role="status"></div><br>週次レポートを生成・送信中...</div>' :
+                '<div class="text-center"><div class="spinner-border" role="status"></div><br>週次レポートを生成中...</div>';
+            
+            statusElement.innerHTML = loadingMessage;
+            reportContentElement.style.display = 'none';
+            
+            try {
+                const response = await fetch('/api/reports/weekly', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        send_email: sendEmail
+                    })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    let successMessage = `<div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        ${data.message}`;
+                    
+                    if (sendEmail && data.email_sent) {
+                        successMessage += `<br><small class="text-muted"><i class="fas fa-envelope me-1"></i>メール送信完了</small>`;
+                    } else if (sendEmail && !data.email_sent) {
+                        successMessage += `<br><small class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>メール送信に失敗しました（設定を確認してください）</small>`;
+                    }
+                    
+                    successMessage += '</div>';
+                    statusElement.innerHTML = successMessage;
+                    
+                    // レポート内容を表示
+                    if (data.output) {
+                        reportTextElement.textContent = data.output;
+                        reportContentElement.style.display = 'block';
+                        
+                        // レポート内容エリアにスクロール
+                        reportContentElement.scrollIntoView({ behavior: 'smooth' });
+                    }
+                } else {
+                    statusElement.innerHTML = `<div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ${data.message}
+                    </div>`;
+                }
+                
+            } catch (error) {
+                statusElement.innerHTML = `<div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    週次レポートの生成に失敗しました
+                </div>`;
+            }
+        }
+
+        // 月次AI分析レポートを生成
+        async function generateMonthlyReport(sendEmail = false) {
+            const statusElement = document.getElementById('monthly-report-status');
+            const reportContentElement = document.getElementById('monthly-report-content');
+            const reportTextElement = document.getElementById('monthly-report-text');
+            
+            const loadingMessage = sendEmail ? 
+                '<div class="text-center"><div class="spinner-border" role="status"></div><br>月次AI分析レポートを生成・送信中...</div>' :
+                '<div class="text-center"><div class="spinner-border" role="status"></div><br>月次AI分析レポートを生成中...</div>';
+            
+            statusElement.innerHTML = loadingMessage;
+            reportContentElement.style.display = 'none';
+            
+            try {
+                const response = await fetch('/api/reports/monthly', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        send_email: sendEmail
+                    })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    let successMessage = `<div class="alert alert-success">
+                        <i class="fas fa-robot me-2"></i>
+                        ${data.message}`;
+                    
+                    if (sendEmail && data.email_sent) {
+                        successMessage += `<br><small class="text-muted"><i class="fas fa-envelope me-1"></i>AI分析レポートメール送信完了</small>`;
+                    } else if (sendEmail && !data.email_sent) {
+                        successMessage += `<br><small class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>メール送信に失敗しました（設定を確認してください）</small>`;
+                    }
+                    
+                    successMessage += '</div>';
+                    statusElement.innerHTML = successMessage;
+                    
+                    // レポート内容を表示
+                    if (data.output) {
+                        reportTextElement.textContent = data.output;
+                        reportContentElement.style.display = 'block';
+                        
+                        // レポート内容エリアにスクロール
+                        reportContentElement.scrollIntoView({ behavior: 'smooth' });
+                    }
+                } else {
+                    statusElement.innerHTML = `<div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ${data.message}
+                    </div>`;
+                }
+                
+            } catch (error) {
+                statusElement.innerHTML = `<div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    月次AI分析レポートの生成に失敗しました
+                </div>`;
+            }
+        }
+
+        // Insta360セクションにスクロール
+        function scrollToInsta360() {
+            const insta360Section = document.getElementById('insta360-section');
+            if (insta360Section) {
+                insta360Section.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        // Fail2Banセクションにスクロール
+        function scrollToFail2Ban() {
+            const fail2banSection = document.getElementById('fail2ban-section');
+            if (fail2banSection) {
+                fail2banSection.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        // Fail2Ban状態を更新
+        async function updateFail2BanStatus() {
+            try {
+                const response = await fetch('/api/fail2ban/status');
+                const data = await response.json();
+                
+                const statusElement = document.getElementById('fail2ban-status');
+                
+                if (data.status === 'running') {
+                    let html = '<div class="alert alert-success">';
+                    html += '<i class="fas fa-check-circle me-2"></i>';
+                    html += 'Fail2Banが正常に稼働中です<br>';
+                    html += `<small>総BAN数: ${data.total_banned || 0}</small>`;
+                    html += '</div>';
+                    
+                    // jail詳細情報を表示
+                    if (data.jails && Object.keys(data.jails).length > 0) {
+                        html += '<div class="mt-3">';
+                        html += '<h6>アクティブなjail:</h6>';
+                        html += '<ul class="list-unstyled">';
+                        for (const [jailName, jailInfo] of Object.entries(data.jails)) {
+                            html += `<li><i class="fas fa-shield-alt me-1"></i>${jailName}: ${jailInfo.banned_count}件のBAN</li>`;
+                        }
+                        html += '</ul>';
+                        html += '</div>';
+                    }
+                    
+                    statusElement.innerHTML = html;
+                    
+                    // 統計情報を更新
+                    updateFail2BanStats(data);
+                    
+                } else if (data.status === 'mock') {
+                    statusElement.innerHTML = `<div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        ${data.message}
+                    </div>`;
+                } else {
+                    statusElement.innerHTML = `<div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ${data.message || 'Fail2Banの状態を取得できませんでした'}
+                    </div>`;
+                }
+                
+            } catch (error) {
+                console.error('Fail2Ban状態取得エラー:', error);
+                document.getElementById('fail2ban-status').innerHTML = `<div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Fail2Ban状態の取得に失敗しました
+                </div>`;
+            }
+        }
+
+        // Fail2Ban統計を更新
+        function updateFail2BanStats(data) {
+            const totalBanned = data.total_banned || 0;
+            const activeJails = data.jails ? Object.keys(data.jails).length : 0;
+            const lastUpdate = new Date().toLocaleTimeString('ja-JP');
+            
+            document.getElementById('total-banned').textContent = totalBanned;
+            document.getElementById('active-jails').textContent = activeJails;
+            document.getElementById('last-update').textContent = lastUpdate;
+        }
+
+        // Fail2Ban状態を手動更新
+        function refreshFail2BanStatus() {
+            updateFail2BanStatus();
+        }
+
+        // jail詳細情報を更新
+        async function updateFail2BanJails() {
+            try {
+                const response = await fetch('/api/fail2ban/jails');
+                const data = await response.json();
+                
+                const jailsElement = document.getElementById('fail2ban-jails');
+                
+                if (data.jails && Object.keys(data.jails).length > 0) {
+                    let html = '<div class="list-group list-group-flush">';
+                    for (const [jailName, jailInfo] of Object.entries(data.jails)) {
+                        const statusClass = jailInfo.status === 'active' ? 'success' : 'secondary';
+                        html += `<div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>${jailName}</strong><br>
+                                <small class="text-muted">BAN数: ${jailInfo.banned_count}</small>
+                            </div>
+                            <span class="badge bg-${statusClass}">${jailInfo.status}</span>
+                        </div>`;
+                    }
+                    html += '</div>';
+                    jailsElement.innerHTML = html;
+                } else {
+                    jailsElement.innerHTML = '<p class="text-muted">アクティブなjailが見つかりません</p>';
+                }
+                
+            } catch (error) {
+                console.error('jail詳細情報取得エラー:', error);
+                document.getElementById('fail2ban-jails').innerHTML = '<div class="alert alert-danger">jail詳細情報の取得に失敗しました</div>';
+            }
+        }
+
+        // BAN履歴を更新
+        async function updateBanHistory() {
+            try {
+                const response = await fetch('/api/fail2ban/ban-history');
+                const data = await response.json();
+                
+                const historyElement = document.getElementById('ban-history');
+                
+                if (data.ban_history && data.ban_history.length > 0) {
+                    let html = '';
+                    
+                    // 件数情報を表示
+                    if (data.has_more) {
+                        html += `<div class="alert alert-info mb-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            最新 ${data.displayed_bans} 件を表示中（全 ${data.total_bans} 件）
+                        </div>`;
+                    } else {
+                        html += `<div class="alert alert-info mb-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            全 ${data.total_bans} 件を表示中
+                        </div>`;
+                    }
+                    
+                    html += '<div class="list-group list-group-flush" style="max-height: 400px; overflow-y: auto;">';
+                    data.ban_history.forEach(ban => {
+                        const location = ban.location || 'Unknown';
+                        html += `<div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>${ban.ip}</strong><br>
+                                    <small class="text-muted">${ban.timestamp}</small><br>
+                                    <small class="text-info"><i class="fas fa-map-marker-alt me-1"></i>${location}</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-danger">${ban.jail}</span><br>
+                                    <small class="text-muted">${ban.action}</small>
+                                </div>
+                            </div>
+                        </div>`;
+                    });
+                    html += '</div>';
+                    
+                    // より多くの履歴がある場合の注意書き
+                    if (data.has_more) {
+                        html += `<div class="mt-2">
+                            <small class="text-muted">
+                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                表示件数は最新50件に制限されています
+                            </small>
+                        </div>`;
+                    }
+                    
+                    historyElement.innerHTML = html;
+                } else {
+                    historyElement.innerHTML = '<p class="text-muted">BAN履歴が見つかりません</p>';
+                }
+                
+            } catch (error) {
+                console.error('BAN履歴取得エラー:', error);
+                document.getElementById('ban-history').innerHTML = '<div class="alert alert-danger">BAN履歴の取得に失敗しました</div>';
+            }
+        }
+
+        // BAN履歴を手動更新
+        function refreshBanHistory() {
+            updateBanHistory();
+        }
+
+        // BAN解除フォームの処理
+        document.getElementById('unban-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const ip = document.getElementById('unban-ip').value;
+            const jail = document.getElementById('unban-jail').value;
+            const resultElement = document.getElementById('unban-result');
+            
+            if (!ip) {
+                resultElement.innerHTML = '<div class="alert alert-danger">IPアドレスを入力してください</div>';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/fail2ban/unban', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        ip: ip,
+                        jail: jail
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultElement.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+                    // フォームをクリア
+                    document.getElementById('unban-ip').value = '';
+                    // 関連データを更新
+                    updateFail2banStatus();
+                    updateFail2BanJails();
+                    updateBanHistory();
+                } else {
+                    resultElement.innerHTML = `<div class="alert alert-danger">${data.message}</div>`;
+                }
+                
+            } catch (error) {
+                console.error('BAN解除エラー:', error);
+                resultElement.innerHTML = '<div class="alert alert-danger">BAN解除に失敗しました</div>';
+            }
+        });
+
+        // Insta360制御関連の関数
+        // Insta360状態を更新
+        async function updateInsta360Status() {
+            try {
+                const response = await fetch('/api/insta360/status');
+                const data = await response.json();
+                
+                const statusElement = document.getElementById('insta360-status');
+                
+                if (data.status === 'running') {
+                    statusElement.innerHTML = `<div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        ${data.message}<br>
+                        <small>コンテナ状態: ${data.container_status}</small>
+                    </div>`;
+                } else if (data.status === 'stopped') {
+                    statusElement.innerHTML = `<div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ${data.message}<br>
+                        <small>コンテナ状態: ${data.container_status}</small>
+                    </div>`;
+                } else if (data.status === 'mock') {
+                    statusElement.innerHTML = `<div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        ${data.message}<br>
+                        <small>コンテナ状態: ${data.container_status}</small>
+                    </div>`;
+                } else {
+                    statusElement.innerHTML = `<div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ${data.message || '状態取得に失敗しました'}
+                    </div>`;
+                }
+                
+            } catch (error) {
+                console.error('Insta360状態取得エラー:', error);
+                document.getElementById('insta360-status').innerHTML = `<div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Insta360状態の取得に失敗しました
+                </div>`;
+            }
+        }
+
+        // Insta360状態を手動更新
+        function refreshInsta360Status() {
+            updateInsta360Status();
+        }
+
+
+
+        // Insta360接続テスト
+        async function testInsta360Connection() {
+            const statusElement = document.getElementById('insta360-test-status');
+            statusElement.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div><br>接続テスト中...</div>';
+            
+            try {
+                const response = await fetch('/api/insta360/test-connection');
+                const data = await response.json();
+                
+                if (data.success) {
+                    statusElement.innerHTML = `<div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        ${data.message}<br>
+                        <small>テスト時刻: ${new Date(data.timestamp).toLocaleString('ja-JP')}</small>
+                    </div>`;
+                    
+                    // 出力がある場合は表示
+                    if (data.output) {
+                        statusElement.innerHTML += `<div class="mt-3">
+                            <h6>テスト結果:</h6>
+                            <pre class="bg-light p-2 rounded" style="font-size: 0.8em; max-height: 200px; overflow-y: auto;">${data.output}</pre>
+                        </div>`;
+                    }
+                } else {
+                    statusElement.innerHTML = `<div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ${data.message}<br>
+                        <small>テスト時刻: ${new Date(data.timestamp).toLocaleString('ja-JP')}</small>
+                    </div>`;
+                    
+                    // エラー詳細がある場合は表示
+                    if (data.error) {
+                        statusElement.innerHTML += `<div class="mt-3">
+                            <h6>エラー詳細:</h6>
+                            <pre class="bg-light p-2 rounded text-danger" style="font-size: 0.8em; max-height: 200px; overflow-y: auto;">${data.error}</pre>
+                        </div>`;
+                    }
+                }
+                
+            } catch (error) {
+                statusElement.innerHTML = `<div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    接続テストに失敗しました
+                </div>`;
+            }
+        }
+
+        // 全プロジェクトログを更新
+        async function refreshAllLogs() {
+            try {
+                const response = await fetch('/api/logs/all');
+                const data = await response.json();
+                
+                const logsElement = document.getElementById('all-logs-content');
+                
+                if (data.success && data.projects && data.projects.length > 0) {
+                    let html = '';
+                    
+                    data.projects.forEach(project => {
+                        html += `<div class="mb-4">
+                            <h6 class="text-primary">
+                                <i class="fas fa-folder me-2"></i>
+                                ${project.project}
+                            </h6>`;
+                        
+                        if (project.logs && project.logs.length > 0) {
+                            project.logs.forEach(log => {
+                                const sizeKB = (log.size / 1024).toFixed(1);
+                                const lastModified = new Date(log.last_modified).toLocaleString('ja-JP');
+                                
+                                html += `<div class="log-file-info">
+                                    <div class="log-file-header">
+                                        <h6 class="mb-0">
+                                            <i class="fas fa-file-alt me-2"></i>
+                                            ${log.filename}
+                                        </h6>
+                                        <div class="log-file-stats">
+                                            サイズ: ${sizeKB}KB | 行数: ${log.lines} | 更新: ${lastModified}
+                                        </div>
+                                    </div>
+                                    <div class="log-content">`;
+                                
+                                log.recent_lines.forEach(line => {
+                                    html += `<div class="${line.class}">${line.content}</div>`;
+                                });
+                                
+                                html += `</div></div>`;
+                            });
+                        } else {
+                            html += `<div class="text-muted">ログファイルが見つかりません</div>`;
+                        }
+                        
+                        html += `</div>`;
+                    });
+                    
+                    logsElement.innerHTML = html;
+                } else {
+                    logsElement.innerHTML = '<div class="text-muted text-center">ログファイルが見つかりません</div>';
+                }
+                
+            } catch (error) {
+                console.error('全ログ取得エラー:', error);
+                document.getElementById('all-logs-content').innerHTML = '<div class="alert alert-danger">ログの取得に失敗しました</div>';
+            }
+        }
+
+        // プロジェクト選択肢を動的に生成
+        async function loadProjectSelector() {
+            try {
+                const response = await fetch('/api/logs/config');
+                const data = await response.json();
+                
+                const selector = document.getElementById('project-selector');
+                
+                if (data.success && data.config && data.config.projects) {
+                    // 既存のオプションをクリア（最初のオプション以外）
+                    while (selector.children.length > 1) {
+                        selector.removeChild(selector.lastChild);
+                    }
+                    
+                    data.config.projects.forEach(project => {
+                        const option = document.createElement('option');
+                        option.value = project.value;
+                        option.textContent = project.text;
+                        option.title = project.description;
+                        selector.appendChild(option);
+                    });
+                }
+                
+            } catch (error) {
+                console.error('プロジェクト選択肢取得エラー:', error);
+            }
+        }
+
+        // プロジェクト別ログを読み込み
+        async function loadProjectLogs() {
+            const projectName = document.getElementById('project-selector').value;
+            if (!projectName) {
+                document.getElementById('project-logs-content').innerHTML = '<div class="text-muted text-center">プロジェクトを選択してください</div>';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/logs/project/${projectName}`);
+                const data = await response.json();
+                
+                const logsElement = document.getElementById('project-logs-content');
+                
+                if (data.success && data.logs && data.logs.length > 0) {
+                    let html = `<h6 class="text-${data.project_color || 'primary'} mb-3">
+                        <i class="${data.project_icon || 'fas fa-folder'} me-2"></i>
+                        ${data.project_name || data.project}
+                    </h6>`;
+                    
+                    if (data.project_description) {
+                        html += `<p class="text-muted small mb-3">${data.project_description}</p>`;
+                    }
+                    
+                    data.logs.forEach(log => {
+                        const sizeKB = (log.size / 1024).toFixed(1);
+                        const lastModified = new Date(log.last_modified).toLocaleString('ja-JP');
+                        
+                        html += `<div class="log-file-info">
+                            <div class="log-file-header">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-file-alt me-2"></i>
+                                    ${log.filename}
+                                </h6>
+                                <div class="log-file-stats">
+                                    サイズ: ${sizeKB}KB | 行数: ${log.lines} | 更新: ${lastModified}
+                                </div>
+                            </div>
+                            <div class="log-content">`;
+                        
+                        log.recent_lines.forEach(line => {
+                            html += `<div class="${line.class}">${line.content}</div>`;
+                        });
+                        
+                        html += `</div></div>`;
+                    });
+                    
+                    logsElement.innerHTML = html;
+                } else {
+                    logsElement.innerHTML = '<div class="text-muted text-center">ログファイルが見つかりません</div>';
+                }
+                
+            } catch (error) {
+                console.error('プロジェクトログ取得エラー:', error);
+                document.getElementById('project-logs-content').innerHTML = '<div class="alert alert-danger">ログの取得に失敗しました</div>';
+            }
+        }
+
+        // 自動更新の切り替え
+        let autoRefreshInterval = null;
+        function toggleAutoRefresh() {
+            const btn = document.getElementById('auto-refresh-btn');
+            
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+                btn.innerHTML = '<i class="fas fa-play me-1"></i>自動更新';
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-outline-secondary');
+            } else {
+                autoRefreshInterval = setInterval(refreshAllLogs, 30000); // 30秒ごと
+                btn.innerHTML = '<i class="fas fa-pause me-1"></i>停止';
+                btn.classList.remove('btn-outline-secondary');
+                btn.classList.add('btn-success');
+            }
+        }
+
+        // Dockerログを更新
+        async function refreshDockerLogs() {
+            try {
+                const response = await fetch('/api/docker/logs/all');
+                const data = await response.json();
+                
+                const logsElement = document.getElementById('docker-logs-content');
+                
+                if (data.success && data.containers && data.containers.length > 0) {
+                    let html = '';
+                    
+                    data.containers.forEach(container => {
+                        html += `<div class="mb-4">
+                            <h6 class="text-primary">
+                                <i class="fas fa-docker me-2"></i>
+                                ${container.container_name}
+                            </h6>`;
+                        
+                        if (container.logs && container.logs.length > 0) {
+                            html += `<div class="log-file-info">
+                                <div class="log-file-header">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-cube me-2"></i>
+                                        Docker Container Logs
+                                    </h6>
+                                    <div class="log-file-stats">
+                                        行数: ${container.total_lines}
+                                    </div>
+                                </div>
+                                <div class="log-content">`;
+                            
+                            container.logs.forEach(line => {
+                                html += `<div class="${line.class}">${line.content}</div>`;
+                            });
+                            
+                            html += `</div></div>`;
+                        } else {
+                            html += `<div class="text-muted">ログが見つかりません</div>`;
+                        }
+                        
+                        html += `</div>`;
+                    });
+                    
+                    logsElement.innerHTML = html;
+                } else {
+                    logsElement.innerHTML = '<div class="text-muted text-center">Dockerコンテナが見つかりません</div>';
+                }
+                
+            } catch (error) {
+                console.error('Dockerログ取得エラー:', error);
+                document.getElementById('docker-logs-content').innerHTML = '<div class="alert alert-danger">Dockerログの取得に失敗しました</div>';
+            }
+        }
+
+        // Dockerコンテナ一覧を取得
+        async function loadDockerContainers() {
+            try {
+                const response = await fetch('/api/docker/containers');
+                const data = await response.json();
+                
+                const selector = document.getElementById('container-selector');
+                
+                if (data.success && data.containers && data.containers.length > 0) {
+                    // 既存のオプションをクリア（最初のオプション以外）
+                    while (selector.children.length > 1) {
+                        selector.removeChild(selector.lastChild);
+                    }
+                    
+                    data.containers.forEach(container => {
+                        const option = document.createElement('option');
+                        option.value = container.name;
+                        option.textContent = `${container.name} (${container.status})`;
+                        selector.appendChild(option);
+                    });
+                }
+                
+            } catch (error) {
+                console.error('Dockerコンテナ一覧取得エラー:', error);
+            }
+        }
+
+        // 特定のDockerコンテナのログを読み込み
+        async function loadContainerLogs() {
+            const containerName = document.getElementById('container-selector').value;
+            if (!containerName) {
+                document.getElementById('container-logs-content').innerHTML = '<div class="text-muted text-center">コンテナを選択してください</div>';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/docker/logs/${containerName}`);
+                const data = await response.json();
+                
+                const logsElement = document.getElementById('container-logs-content');
+                
+                if (data.success && data.logs && data.logs.length > 0) {
+                    let html = `<h6 class="text-primary mb-3">
+                        <i class="fas fa-docker me-2"></i>
+                        ${data.container_name}
+                    </h6>`;
+                    
+                    html += `<div class="log-file-info">
+                        <div class="log-file-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-cube me-2"></i>
+                                Docker Container Logs
+                            </h6>
+                            <div class="log-file-stats">
+                                行数: ${data.total_lines}
+                            </div>
+                        </div>
+                        <div class="log-content">`;
+                    
+                    data.logs.forEach(line => {
+                        html += `<div class="${line.class}">${line.content}</div>`;
+                    });
+                    
+                    html += `</div></div>`;
+                    
+                    logsElement.innerHTML = html;
+                } else {
+                    logsElement.innerHTML = '<div class="text-muted text-center">ログが見つかりません</div>';
+                }
+                
+            } catch (error) {
+                console.error('Dockerコンテナログ取得エラー:', error);
+                document.getElementById('container-logs-content').innerHTML = '<div class="alert alert-danger">ログの取得に失敗しました</div>';
+            }
+        }
+
+        // Docker自動更新の切り替え
+        let dockerAutoRefreshInterval = null;
+        function toggleDockerAutoRefresh() {
+            const btn = document.getElementById('docker-auto-refresh-btn');
+            
+            if (dockerAutoRefreshInterval) {
+                clearInterval(dockerAutoRefreshInterval);
+                dockerAutoRefreshInterval = null;
+                btn.innerHTML = '<i class="fas fa-play me-1"></i>自動更新';
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-outline-secondary');
+            } else {
+                dockerAutoRefreshInterval = setInterval(refreshDockerLogs, 30000); // 30秒ごと
+                btn.innerHTML = '<i class="fas fa-pause me-1"></i>停止';
+                btn.classList.remove('btn-outline-secondary');
+                btn.classList.add('btn-success');
+            }
+        }
+    </script>
+</body>
+</html>

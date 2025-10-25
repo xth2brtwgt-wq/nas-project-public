@@ -1,0 +1,60 @@
+{
+  "version": "1.0.0",
+  "description": "音声文字起こし用カスタム辞書",
+  "last_updated": "2025-10-16",
+  "categories": {
+    "company_names": {
+      "description": "会社名・組織名",
+      "entries": {
+        "グリーン": "Ugreen",
+        "ユーグリーン": "Ugreen",
+        "ディーエックスピー": "DXP",
+        "ディーエックスピー2800": "DXP2800",
+        "サミー": "Sammy",
+        "ピコ": "Pico"
+      }
+    },
+    "technical_terms": {
+      "description": "技術用語",
+      "entries": {
+        "エヌエーエス": "NAS",
+        "ネットワークアタッチトストレージ": "NAS",
+        "ドッカー": "Docker",
+        "コンテナ": "コンテナ",
+        "ポートレーナー": "Portainer",
+        "フラスク": "Flask",
+        "ピーエイチピー": "PHP",
+        "エスエスエイチ": "SSH",
+        "エスシーピー": "SCP",
+        "ジット": "Git",
+        "ギットハブ": "GitHub",
+        "ドクターサム": "Dr.Sum",
+        "デブ": "DEV"
+      }
+    },
+    "person_names": {
+      "description": "人名",
+      "entries": {
+        "さとり": "佐鳥",
+        "よしうみ": "吉海"
+      }
+    },
+    "common_phrases": {
+      "description": "よく使われるフレーズ",
+      "entries": {
+        "よろしくお願いします": "よろしくお願いします",
+        "失礼します": "失礼します"
+      }
+    }
+  },
+  "settings": {
+    "case_sensitive": false,
+    "partial_match": true,
+    "priority_order": [
+      "company_names",
+      "technical_terms",
+      "person_names",
+      "common_phrases"
+    ]
+  }
+}

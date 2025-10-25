@@ -1,0 +1,74 @@
+
+services:
+  web:
+    build: .
+    container_name: amazon-analytics-web
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/amazon_analytics
+      - REDIS_URL=redis://redis:6379/0
+      - AI_PROVIDER=${AI_PROVIDER:-gemini}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - /home/AdminUser/nas-project-data/amazon-analytics:/app/data
+      - ./app:/app/app
+      - ./config:/app/config
+    depends_on:
+      - db
+      - redis
+    networks:
+      - amazon-analytics
+
+  db:
+    image: postgres:15-alpine
+    container_name: amazon-analytics-db
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_DB=amazon_analytics
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - amazon-analytics
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: amazon-analytics-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - amazon-analytics
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  amazon-analytics:
+    driver: bridge
+

@@ -1,0 +1,44 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Pythonパスの設定
+ENV PYTHONPATH=/app
+
+# システムパッケージのインストール
+RUN apt-get update && apt-get install -y \
+    libmagic1 \
+    poppler-utils \
+    tesseract-ocr \
+    tesseract-ocr-jpn \
+    tesseract-ocr-eng \
+    && rm -rf /var/lib/apt/lists/*
+
+# Tesseract環境変数の設定
+ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
+
+# Pythonパッケージのインストール
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# アプリケーションコードをコピー
+COPY app/ /app/app/
+COPY config/ /app/config/
+COPY utils/ /app/utils/
+
+# 作業ディレクトリの作成
+RUN mkdir -p /app/uploads /app/processed /app/exports /app/cache
+
+# 非rootユーザーで実行
+RUN useradd -m -u 1000 appuser && \
+    chown -R appuser:appuser /app
+USER appuser
+
+# ヘルスチェック
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import requests; requests.get('http://localhost:8080/health')" || exit 1
+
+EXPOSE 8080
+
+CMD ["gunicorn", "app.api.main:app", "--workers", "4", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8080", "--timeout", "120", "--log-level", "info"]
+

@@ -1,0 +1,30 @@
+# YouTube要約システム - 依存関係
+# meeting-minutes-bycベース + YouTube機能追加
+
+# Web Framework
+Flask==3.0.0
+Flask-SocketIO==5.3.6
+Flask-CORS==4.0.0
+
+# AI & ML
+google-generativeai==0.3.2
+anthropic==0.7.8
+
+# YouTube & Media
+yt-dlp==2025.10.22
+ffmpeg-python==0.2.0
+
+# Notion Integration
+notion-client==2.2.1
+
+# Utilities
+python-dotenv==1.0.0
+requests==2.31.0
+Pillow==10.1.0
+
+# Async Processing (将来の拡張用)
+celery==5.3.4
+redis==5.0.1
+
+# Development
+gunicorn==21.2.0

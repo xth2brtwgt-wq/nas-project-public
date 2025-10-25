@@ -1,0 +1,38 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Pythonパスの設定
+ENV PYTHONPATH=/app
+
+# システムパッケージのインストール
+RUN apt-get update && apt-get install -y \
+    libmagic1 \
+    poppler-utils \
+    tesseract-ocr \
+    tesseract-ocr-jpn \
+    tesseract-ocr-eng \
+    && rm -rf /var/lib/apt/lists/*
+
+# Tesseract環境変数の設定
+ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
+
+# Pythonパッケージのインストール
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# アプリケーションコードをコピー
+COPY app/ /app/app/
+COPY config/ /app/config/
+COPY utils/ /app/utils/
+
+# 作業ディレクトリの作成
+RUN mkdir -p /app/uploads /app/processed /app/exports /app/cache
+
+# 非rootユーザーで実行
+RUN useradd -m -u 1000 appuser && \
+    chown -R appuser:appuser /app
+USER appuser
+
+CMD ["celery", "-A", "app.workers.celery_app", "worker", "--loglevel=info", "--concurrency=2"]
+

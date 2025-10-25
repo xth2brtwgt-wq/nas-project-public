@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  youtube-to-notion:
+    build: .
+    image: youtube-to-notion:latest
+    container_name: youtube-to-notion
+    restart: unless-stopped
+    ports:
+      - "8111:8110"  # NAS用ポート変更
+    environment:
+      # 固定値のみ設定（環境変数はenv_fileから読み込み）
+      - HOST=0.0.0.0
+      - PORT=8110
+      - UPLOAD_DIR=/app/data/uploads
+      - OUTPUT_DIR=/app/data/outputs
+      - CACHE_DIR=/app/data/cache
+      - LOG_DIR=/app/logs
+      - TZ=Asia/Tokyo
+    volumes:
+      # NAS環境でのデータ永続化（統合データディレクトリ使用）
+      - /home/AdminUser/nas-project-data/youtube-to-notion/uploads:/app/data/uploads
+      - /home/AdminUser/nas-project-data/youtube-to-notion/outputs:/app/data/outputs
+      - /home/AdminUser/nas-project-data/youtube-to-notion/cache:/app/data/cache
+      - /home/AdminUser/nas-project-data/youtube-to-notion/logs:/app/logs
+      # 環境変数ファイル
+      - ./.env:/app/.env:ro
+    env_file:
+      # 環境変数ファイル（.envを読み込み）
+      - .env  # 実際の設定
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # リソース制限
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    # セキュリティ設定
+    security_opt:
+      - no-new-privileges:true
+    # ラベル設定（Watchtower対応）
+    labels:
+      - "com.docker.compose.project=youtube-to-notion"
+      - "com.docker.compose.service=youtube-to-notion"
+      - "com.centurylinklabs.watchtower.enable=true"
+    # ヘルスチェック
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8110/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # ネットワーク設定
+    networks:
+      - nas-network
+
+networks:
+  nas-network:
+    external: true

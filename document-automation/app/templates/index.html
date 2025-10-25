@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-primary">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">📄 ドキュメント自動処理システム</span>
+            <span class="navbar-text text-white">
+                <small>v<span id="app-version">-</span> <span id="version-name"></span></small>
+            </span>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- システムステータス -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">システムステータス</h5>
+                        <div id="system-status">
+                            <p class="mb-1">📌 バージョン: <span id="version-display" class="badge bg-success">v<span id="status-version">-</span></span> <small class="text-muted" id="release-date"></small></p>
+                            <p class="mb-1">🔄 処理モード: <span id="processing-mode" class="badge bg-info">読み込み中...</span></p>
+                            <p class="mb-1">🔍 OCRエンジン: <span id="ocr-engine" class="badge bg-secondary">読み込み中...</span></p>
+                            <p class="mb-0">🤖 AIプロバイダー: <span id="ai-provider" class="badge bg-secondary">読み込み中...</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 統計情報 -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6 class="card-title">総ドキュメント数</h6>
+                        <h2 id="total-docs" class="text-primary">-</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6 class="card-title">処理済み</h6>
+                        <h2 id="completed-docs" class="text-success">-</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6 class="card-title">処理中</h6>
+                        <h2 id="processing-docs" class="text-warning">-</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6 class="card-title">エラー</h6>
+                        <h2 id="failed-docs" class="text-danger">-</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- タブナビゲーション -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <ul class="nav nav-tabs" id="main-tabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="upload-tab" data-bs-toggle="tab" data-bs-target="#upload-pane" type="button" role="tab">
+                            📤 ファイルアップロード
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="rag-tab" data-bs-toggle="tab" data-bs-target="#rag-pane" type="button" role="tab">
+                            🤖 RAG検索
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="documents-tab" data-bs-toggle="tab" data-bs-target="#documents-pane" type="button" role="tab">
+                            📋 ドキュメント一覧
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- タブコンテンツ -->
+        <div class="tab-content" id="main-tab-content">
+            <!-- アップロードタブ -->
+            <div class="tab-pane fade show active" id="upload-pane" role="tabpanel">
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">📤 ファイルアップロード</h5>
+                        
+                        <!-- ドラッグ&ドロップゾーン -->
+                        <div id="drop-zone" class="drop-zone mb-3">
+                            <div class="drop-icon">📄</div>
+                            <div class="drop-text">ファイルをドラッグ&ドロップ または クリックして選択</div>
+                            <div class="drop-info">PDF、JPEG、PNG対応（最大50MB）</div>
+                        </div>
+                        
+                        <input class="form-control" type="file" id="file-input" multiple accept=".pdf,.jpg,.jpeg,.png" style="display: none;">
+                        
+                        <button class="btn btn-primary btn-lg w-100" id="upload-btn">
+                            <i class="bi bi-cloud-upload"></i> アップロード開始
+                        </button>
+                        
+                        <div id="upload-progress" class="mt-3" style="display:none;">
+                            <div class="progress">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+                            </div>
+                        </div>
+                        <div id="upload-result" class="mt-3"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RAG検索タブ -->
+            <div class="tab-pane fade" id="rag-pane" role="tabpanel">
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">🤖 RAG検索</h5>
+                                
+                                <!-- 検索フォーム -->
+                                <div class="mb-4">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <div class="input-group">
+                                                <input type="text" class="form-control" id="rag-query" placeholder="質問や検索したい内容を入力してください...">
+                                                <button class="btn btn-primary" id="rag-search-btn">🔍 検索</button>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <button class="btn btn-outline-secondary" id="rag-filters-btn">🔧 フィルタ設定</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- フィルタ設定（折りたたみ可能） -->
+                                <div class="collapse" id="rag-filters-collapse">
+                                    <div class="card card-body mb-3">
+                                        <h6>検索範囲の絞り込み</h6>
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <label class="form-label">カテゴリ</label>
+                                                <select class="form-select" id="rag-category-filter" multiple>
+                                                    <option value="">すべて</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">ファイル形式</label>
+                                                <select class="form-select" id="rag-file-type-filter" multiple>
+                                                    <option value="">すべて</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">日付範囲（開始）</label>
+                                                <input type="date" class="form-control" id="rag-date-start">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">日付範囲（終了）</label>
+                                                <input type="date" class="form-control" id="rag-date-end">
+                                            </div>
+                                        </div>
+                                        <div class="row mt-2">
+                                            <div class="col-md-6">
+                                                <label class="form-label">キーワード</label>
+                                                <input type="text" class="form-control" id="rag-keywords" placeholder="キーワードをカンマ区切りで入力">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">類似度閾値</label>
+                                                <input type="range" class="form-range" id="rag-similarity-threshold" min="0" max="1" step="0.1" value="0.7">
+                                                <small class="form-text text-muted">現在: <span id="rag-similarity-value">0.7</span></small>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">取得件数</label>
+                                                <select class="form-select" id="rag-limit">
+                                                    <option value="5">5件</option>
+                                                    <option value="10" selected>10件</option>
+                                                    <option value="20">20件</option>
+                                                    <option value="50">50件</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 検索結果 -->
+                                <div id="rag-results" style="display: none;">
+                                    <h6>検索結果</h6>
+                                    <div id="rag-answer" class="alert alert-info"></div>
+                                    <div id="rag-sources"></div>
+                                </div>
+
+                                <!-- 検索履歴 -->
+                                <div class="mt-4">
+                                    <h6>検索履歴</h6>
+                                    <div id="rag-history" class="list-group"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ドキュメント一覧タブ -->
+            <div class="tab-pane fade" id="documents-pane" role="tabpanel">
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">📋 ドキュメント一覧</h5>
+                        
+                        <!-- 検索・フィルタ -->
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <input type="text" class="form-control" id="search-input" placeholder="検索...">
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="status-filter">
+                                    <option value="">すべてのステータス</option>
+                                    <option value="pending">待機中</option>
+                                    <option value="processing">処理中</option>
+                                    <option value="completed">完了</option>
+                                    <option value="failed">エラー</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="category-filter">
+                                    <option value="">すべてのカテゴリ</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-secondary w-100" id="refresh-btn">更新</button>
+                            </div>
+                        </div>
+
+                        <!-- ドキュメントテーブル -->
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th><input type="checkbox" id="select-all"></th>
+                                        <th>ファイル名</th>
+                                        <th>カテゴリ</th>
+                                        <th>ステータス</th>
+                                        <th>処理日時</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="documents-table">
+                                    <tr>
+                                        <td colspan="6" class="text-center">読み込み中...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- バッチ操作 -->
+                        <div class="mt-3">
+                            <button class="btn btn-sm btn-outline-success" id="batch-download-btn" disabled>📥 選択した元ファイルをダウンロード</button>
+                            <button class="btn btn-sm btn-outline-primary" id="batch-export-btn" disabled>📄 選択したファイルをエクスポート</button>
+                            <button class="btn btn-sm btn-outline-info" id="batch-summary-btn" disabled>🤖 選択したファイルをまとめる</button>
+                        </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 詳細モーダル -->
+    <div class="modal fade" id="detailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="detailModalTitle">ドキュメント詳細</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="detailModalBody">
+                    読み込み中...
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">閉じる</button>
+                    <button type="button" class="btn btn-success" id="download-original-btn">📥 元ファイルをダウンロード</button>
+                    <button type="button" class="btn btn-primary" id="export-markdown-btn">マークダウンエクスポート</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/app.js?v=20241021"></script>
+</body>
+</html>
+

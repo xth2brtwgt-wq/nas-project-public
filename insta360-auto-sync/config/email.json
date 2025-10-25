@@ -1,0 +1,15 @@
+{
+  "smtp": {
+    "server": "smtp.gmail.com",
+    "port": 587,
+    "user": "mipatago.netsetting@gmail.com",
+    "password": "peyw erjt tpew kfrj",
+    "from": "mipatago.netsetting@gmail.com"
+  },
+  "notification": {
+    "to_email": "nas.system.0828@gmail.com",
+    "send_success": true,
+    "send_error": true,
+    "send_no_files": false
+  }
+}

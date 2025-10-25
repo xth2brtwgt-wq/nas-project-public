@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ app_name }} - YouTube動画要約システム</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Socket.IO -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .main-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            border-radius: 20px 20px 0 0;
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .form-container {
+            padding: 2rem;
+        }
+        
+        .form-control, .form-select {
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+            padding: 12px 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 10px;
+            padding: 12px 30px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .progress-container {
+            display: none;
+            margin-top: 2rem;
+        }
+        
+        .progress {
+            height: 20px;
+            border-radius: 10px;
+            background: #e9ecef;
+        }
+        
+        .progress-bar {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+        
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1rem;
+        }
+        
+        .step {
+            text-align: center;
+            flex: 1;
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .step.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .step.completed {
+            background: #28a745;
+            color: white;
+        }
+        
+        .result-container {
+            display: none;
+            margin-top: 2rem;
+        }
+        
+        .video-info {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .summary-content {
+            background: #fff;
+            border-radius: 10px;
+            padding: 1.5rem;
+            border-left: 4px solid #667eea;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .sample-urls {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .sample-url {
+            display: block;
+            color: #667eea;
+            text-decoration: none;
+            padding: 0.5rem;
+            border-radius: 5px;
+            transition: background 0.3s ease;
+        }
+        
+        .sample-url:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="main-container">
+                    <!-- ヘッダー -->
+                    <div class="header">
+                        <h1 class="mb-2">
+                            <i class="bi bi-youtube me-2"></i>
+                            {{ app_name }}
+                        </h1>
+                        <p class="mb-0">YouTube動画を自動要約してNotionに保存</p>
+                        <small class="opacity-75">v{{ app_version }}</small>
+                    </div>
+                    
+                    <!-- メインフォーム -->
+                    <div class="form-container">
+                        <form id="youtubeForm">
+                            <div class="mb-4">
+                                <label for="youtubeUrl" class="form-label">
+                                    <i class="bi bi-link-45deg me-2"></i>
+                                    YouTube URL
+                                </label>
+                                <input type="url" class="form-control" id="youtubeUrl" 
+                                       placeholder="https://www.youtube.com/watch?v=..." required>
+                                <div class="form-text">YouTube動画のURLを入力してください</div>
+                            </div>
+                            
+                            
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    <i class="bi bi-gear me-2"></i>
+                                    設定
+                                </label>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="saveToNotion" checked>
+                                            <label class="form-check-label" for="saveToNotion">
+                                                Notionに保存
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="includeTimestamps">
+                                            <label class="form-check-label" for="includeTimestamps">
+                                                タイムスタンプ付き文字起こし
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="includeComments" checked>
+                                            <label class="form-check-label" for="includeComments">
+                                                コメント分析を含める
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label for="summaryLength" class="form-label">
+                                    <i class="bi bi-text-paragraph me-2"></i>
+                                    要約の長さ
+                                </label>
+                                <select class="form-select" id="summaryLength">
+                                    <option value="short">短い（3-5文）</option>
+                                    <option value="medium" selected>中程度（5-8文）</option>
+                                    <option value="long">長い（8-12文）</option>
+                                    <option value="very_long">とても長い（12-20文）</option>
+                                </select>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                                    <i class="bi bi-play-circle me-2"></i>
+                                    要約生成開始
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <!-- 進捗表示 -->
+                        <div class="progress-container" id="progressContainer">
+                            <div class="mb-3">
+                                <div class="progress">
+                                    <div class="progress-bar" id="progressBar" role="progressbar" style="width: 0%"></div>
+                                </div>
+                                <div class="text-center mt-2">
+                                    <span id="progressText">処理中...</span>
+                                </div>
+                            </div>
+                            
+                            <div class="step-indicator">
+                                <div class="step" id="step1">動画情報取得</div>
+                                <div class="step" id="step2">音声ダウンロード</div>
+                                <div class="step" id="step3">文字起こし</div>
+                                <div class="step" id="step4">要約生成</div>
+                                <div class="step" id="step5">Notion保存</div>
+                            </div>
+                        </div>
+                        
+                        <!-- 結果表示 -->
+                        <div class="result-container" id="resultContainer">
+                            <div class="video-info" id="videoInfo">
+                                <!-- 動画情報がここに表示される -->
+                            </div>
+                            
+                            <div class="summary-content" id="summaryContent">
+                                <!-- 要約内容がここに表示される -->
+                            </div>
+                            
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-center mt-3">
+                                <button class="btn btn-outline-primary" id="downloadBtn">
+                                    <i class="bi bi-download me-2"></i>
+                                    Markdown保存
+                                </button>
+                                <button class="btn btn-outline-success" id="notionBtn" style="display: none;">
+                                    <i class="bi bi-box-arrow-up-right me-2"></i>
+                                    Notionで開く
+                                </button>
+                                <button class="btn btn-outline-secondary" id="newProcessBtn">
+                                    <i class="bi bi-arrow-clockwise me-2"></i>
+                                    新しい動画を処理
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- エラーメッセージ -->
+                        <div class="error-message" id="errorMessage" style="display: none;">
+                            <!-- エラーメッセージがここに表示される -->
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Socket.IO接続
+        const socket = io();
+        let currentSessionId = null;
+        
+        // フォーム送信
+        document.getElementById('youtubeForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                youtube_url: document.getElementById('youtubeUrl').value,
+                save_to_notion: document.getElementById('saveToNotion').checked,
+                summary_length: document.getElementById('summaryLength').value,
+                include_timestamps: document.getElementById('includeTimestamps').checked,
+                include_comments: document.getElementById('includeComments').checked
+            };
+            
+            startProcessing(formData);
+        });
+        
+        // 処理開始
+        function startProcessing(formData) {
+            // UI状態をリセット
+            hideAllContainers();
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('submitBtn').innerHTML = '<span class="loading-spinner me-2"></span>処理中...';
+            
+            // API呼び出し
+            fetch('/api/youtube/process', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentSessionId = data.session_id;
+                    showProgress();
+                    socket.emit('join_room', { session_id: currentSessionId });
+                } else {
+                    showError(data.error || '処理の開始に失敗しました');
+                }
+            })
+            .catch(error => {
+                showError('ネットワークエラーが発生しました: ' + error.message);
+            });
+        }
+        
+        // 進捗表示
+        function showProgress() {
+            document.getElementById('progressContainer').style.display = 'block';
+        }
+        
+        // 結果表示
+        function showResult(result) {
+            hideAllContainers();
+            document.getElementById('resultContainer').style.display = 'block';
+            
+            // 動画情報表示
+            const videoInfo = document.getElementById('videoInfo');
+            videoInfo.innerHTML = `
+                <h5><i class="bi bi-play-circle me-2"></i>${result.video_info.title}</h5>
+                <p class="mb-1"><strong>チャンネル:</strong> ${result.video_info.channel}</p>
+                <p class="mb-1"><strong>再生時間:</strong> ${result.video_info.duration_formatted}</p>
+                <p class="mb-0"><strong>カテゴリ:</strong> ${result.video_info.category}</p>
+            `;
+            
+            // 要約表示
+            const summaryContent = document.getElementById('summaryContent');
+            summaryContent.innerHTML = `<pre style="white-space: pre-wrap; font-family: inherit;">${result.summary}</pre>`;
+            
+            // Notionボタン表示
+            if (result.notion_url) {
+                document.getElementById('notionBtn').style.display = 'inline-block';
+                document.getElementById('notionBtn').onclick = () => window.open(result.notion_url, '_blank');
+            }
+            
+            // ダウンロードボタン
+            document.getElementById('downloadBtn').onclick = () => {
+                if (currentSessionId) {
+                    // マークダウンファイルをダウンロード
+                    const downloadUrl = `/api/youtube/download/${currentSessionId}`;
+                    const link = document.createElement('a');
+                    link.href = downloadUrl;
+                    link.download = '';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                } else {
+                    alert('セッションが見つかりません');
+                }
+            };
+        }
+        
+        // エラー表示
+        function showError(message) {
+            hideAllContainers();
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i>${message}`;
+            errorDiv.style.display = 'block';
+            resetForm();
+        }
+        
+        // コンテナ非表示
+        function hideAllContainers() {
+            document.getElementById('progressContainer').style.display = 'none';
+            document.getElementById('resultContainer').style.display = 'none';
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+        
+        // フォームリセット
+        function resetForm() {
+            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('submitBtn').innerHTML = '<i class="bi bi-play-circle me-2"></i>要約生成開始';
+        }
+        
+        // サンプルURL設定
+        function setSampleUrl(url) {
+            document.getElementById('youtubeUrl').value = url;
+        }
+        
+        // 新しい処理開始
+        document.getElementById('newProcessBtn').addEventListener('click', function() {
+            hideAllContainers();
+            document.getElementById('youtubeForm').reset();
+        });
+        
+        // Socket.IOイベント
+        socket.on('progress_update', function(data) {
+            if (data.session_id === currentSessionId) {
+                // 進捗バー更新
+                document.getElementById('progressBar').style.width = data.progress + '%';
+                document.getElementById('progressText').textContent = data.message;
+                
+                // ステップ更新
+                updateStep(data.step);
+            }
+        });
+        
+        socket.on('process_complete', function(data) {
+            if (data.session_id === currentSessionId) {
+                showResult(data.result);
+                // ボタンの状態をリセット
+                resetForm();
+            }
+        });
+        
+        socket.on('error', function(data) {
+            showError(data.error);
+            // エラー時もボタンの状態をリセット
+            resetForm();
+        });
+        
+        // ステップ更新
+        function updateStep(step) {
+            const steps = {
+                'video_info': 1,
+                'downloading': 2,
+                'transcription': 3,
+                'summarizing': 4,
+                'notion_save': 5,
+                'completed': 5
+            };
+            
+            const currentStep = steps[step] || 0;
+            
+            for (let i = 1; i <= 5; i++) {
+                const stepElement = document.getElementById(`step${i}`);
+                stepElement.classList.remove('active', 'completed');
+                
+                if (i < currentStep) {
+                    stepElement.classList.add('completed');
+                } else if (i === currentStep) {
+                    stepElement.classList.add('active');
+                }
+            }
+        }
+        
+        // 初期化
+    </script>
+</body>
+</html>

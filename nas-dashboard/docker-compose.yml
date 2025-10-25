@@ -1,0 +1,66 @@
+services:
+  nas-dashboard:
+    build: .
+    image: nas-dashboard:latest
+    container_name: nas-dashboard
+    user: root
+    ports:
+      - "9001:9000"
+    volumes:
+      # Dockerソケットをマウント（Dockerコマンド実行のため）
+      - /var/run/docker.sock:/var/run/docker.sock
+      # NAS環境のプロジェクトディレクトリをマウント
+      - /home/AdminUser/nas-project:/nas-project:ro
+      # 統合データディレクトリをマウント（ログファイルアクセスのため）
+      - /home/AdminUser/nas-project-data:/nas-project-data:ro
+      # ログディレクトリ
+      - ./logs:/app/logs
+      # バックアップディレクトリ
+      - /home/AdminUser/nas-project-data/nas-dashboard/backups:/app/backups
+      # レポートディレクトリ
+      - /home/AdminUser/nas-project-data/nas-dashboard/reports:/app/reports
+      # SSH鍵をマウント（UPS情報取得のため）
+      - /home/AdminUser/.ssh:/root/.ssh
+    environment:
+      - TZ=Asia/Tokyo
+      - FLASK_ENV=production
+      - NAS_MODE=true
+    env_file:
+      - .env
+    restart: unless-stopped
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    networks:
+      - nas-network
+
+  weekly-report-scheduler:
+    build: .
+    image: nas-dashboard:latest
+    container_name: nas-dashboard-scheduler
+    user: root
+    volumes:
+      # Dockerソケットをマウント（Dockerコマンド実行のため）
+      - /var/run/docker.sock:/var/run/docker.sock
+      # NAS環境のプロジェクトディレクトリをマウント
+      - /home/AdminUser/nas-project:/nas-project:ro
+      # 統合データディレクトリをマウント（ログファイルアクセスのため）
+      - /home/AdminUser/nas-project-data:/nas-project-data:ro
+      # ログディレクトリ
+      - ./logs:/app/logs
+      # レポートディレクトリ
+      - /home/AdminUser/nas-project-data/nas-dashboard/reports:/app/reports
+    environment:
+      - TZ=Asia/Tokyo
+      - NAS_MODE=true
+    env_file:
+      - .env
+    command: ["python", "scripts/weekly_report_scheduler.py"]
+    restart: unless-stopped
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    networks:
+      - nas-network
+
+networks:
+  nas-network:
+    external: true
