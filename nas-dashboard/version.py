@@ -1,18 +1,69 @@
 # 統合管理ダッシュボード バージョン情報
 # NAS Integrated Management Dashboard Version Information
 
-__version__ = "1.5.0"
-__version_info__ = (1, 5, 0)
-__build_date__ = "2025-01-21"
+__version__ = "1.7.1"
+__version_info__ = (1, 7, 1)
+__build_date__ = "2025-10-26"
 __author__ = "Yoshi"
 __description__ = "NAS統合管理ダッシュボード"
 
 # バージョン履歴
 VERSION_HISTORY = [
     {
-        "version": "1.5.0",
-        "date": "2025-01-21",
+        "version": "1.7.1",
+        "date": "2025-11-07",
         "changes": [
+            "fix: DB管理画面のテーブル表示不具合を修正"
+        ]
+    },
+    {
+        "version": "1.7.0",
+        "date": "2025-11-07",
+        "changes": [
+            "feat: フロントエンドにブラックリストIP管理UIを追加"
+        ]
+    },
+    {
+        "version": "1.6.3",
+        "date": "2025-11-07",
+        "changes": [
+            "fix: ESLintエラーを修正（confirmをwindow.confirmに変更）"
+        ]
+    },
+    {
+        "version": "1.6.2",
+        "date": "2025-11-06",
+        "changes": [
+            "fix: Dockerログ取得処理の改善"
+        ]
+    },
+    {
+        "version": "1.6.1",
+        "date": "2025-11-06",
+        "changes": [
+            "chore: nas-dashboardバージョンを1.6.0に更新"
+        ]
+    },
+    {
+        "version": "1.6.0",
+        "date": "2025-11-06",
+        "changes": [
+            "feat: 管理者機能の制限とyoshi追加、.env.restoreバックアップ追加"
+        ]
+    },
+    {
+        "version": "1.5.0",
+        "date": "2025-10-26",
+        "changes": [
+            "AI分析機能の統合実装",
+            "セキュリティ分析とログ分析のAI化",
+            "Dockerログ分析の生ログテキスト方式実装",
+            "ハイブリッドログ分析機能（テキストログ + Dockerログ）",
+            "システムタイプ自動判定機能",
+            "月次AI分析レポート自動送信機能",
+            "週次レポート・月次レポートのスケジューラー実装",
+            "レポート管理機能の改善",
+            "重複機能の削除と整理",
             "ログ監視機能の統合実装",
             "ログ監視専用画面(/logs)の追加",
             "全プロジェクトログとDockerコンテナログの統合表示",
