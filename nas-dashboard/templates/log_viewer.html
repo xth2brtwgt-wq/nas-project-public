@@ -2,8 +2,14 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ログ監視 - NAS統合管理ダッシュボード</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>ログ監視 - NAS-System</title>
+    <!-- Favicon設定（Safari対応強化） -->
+    <link rel="icon" href="/favicon.ico?v=2" type="image/x-icon" sizes="any">
+    <link rel="icon" href="/static/favicon.svg?v=2" type="image/svg+xml">
+    <link rel="shortcut icon" href="/favicon.ico?v=2">
+    <link rel="apple-touch-icon" href="/static/favicon.svg?v=2">
+    <link rel="mask-icon" href="/static/favicon.svg?v=2" color="#16a34a">
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -11,6 +17,14 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
     <style>
+        /* 固定ヘッダー */
+        .navbar {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
         .dashboard-card {
             transition: transform 0.2s;
             border: none;
@@ -45,6 +59,17 @@
         .log-error { color: #dc3545; }
         .log-debug { color: #6c757d; }
         
+        .log-analysis-content {
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+        
         .auto-refresh-indicator {
             position: fixed;
             top: 20px;
@@ -71,6 +96,7 @@
         
         .log-stats {
             background-color: #f8f9fa;
+            color: #333333;
             padding: 10px;
             border-radius: 5px;
             margin-bottom: 15px;
@@ -79,27 +105,67 @@
     </style>
 </head>
 <body>
-    <div class="container-fluid mt-4">
-        <div class="row">
-            <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div>
-                        <h1 class="mb-0"><i class="fas fa-file-alt me-2"></i>ログ監視</h1>
-                        <p class="text-muted mb-0">システムログとDockerコンテナログの統合監視</p>
-                    </div>
-                    <a href="/" class="btn btn-outline-primary">
-                        <i class="fas fa-home me-2"></i>
-                        トップ画面に戻る
-                    </a>
-                </div>
-            </div>
+    <nav class="navbar navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a href="/" class="navbar-brand mb-0 h1 text-white text-decoration-none" title="ダッシュボードに戻る" style="display: flex; align-items: center;">
+                <i class="fas fa-arrow-left me-2" style="font-size: 1.2em;"></i><span>📋 ログ監視</span>
+            </a>
+            <span class="navbar-text text-white">
+                <small>v{{ version.version if version else '-' }}</small>
+            </span>
         </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
 
         <!-- 自動更新インジケーター -->
         <div id="auto-refresh-indicator" class="auto-refresh-indicator" style="display: none;">
             <i class="fas fa-sync-alt fa-spin me-2"></i>
             <span id="refresh-status">更新中...</span>
         </div>
+
+        <!-- ログ分析セクション（管理者のみ表示） -->
+        {% if is_admin == True %}
+        <div class="log-section">
+            <div class="row">
+                <div class="col-12">
+                    <div class="card dashboard-card">
+                        <div class="card-header bg-primary text-white">
+                            <h3 class="mb-0"><i class="fas fa-robot me-2"></i>AI ログ分析</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <select id="analysis-system-select" class="form-select">
+                                        <option value="">システムを選択してください...</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <button id="analyze-logs" class="btn btn-primary">
+                                        <i class="fas fa-brain me-2"></i>分析実行
+                                    </button>
+                                </div>
+                                <div class="col-md-4">
+                                    <button id="auto-analyze" class="btn btn-success">
+                                        <i class="fas fa-magic me-2"></i>自動分析
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="log-analysis-result" class="mt-3">
+                                <div class="text-center">
+                                    <div class="alert alert-primary">
+                                        <i class="fas fa-robot me-2"></i>
+                                        <strong>AI ログ分析機能</strong><br>
+                                        システムを選択して「分析実行」ボタンをクリックするか、「自動分析」で全システムを一括分析できます
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
 
         <!-- テキストログセクション -->
         <div class="log-section">
@@ -196,9 +262,371 @@
         let isAutoRefresh = false;
 
         // ページ読み込み時の初期化
+        // ログ分析を実行
+        async function analyzeLogs() {
+            const systemId = document.getElementById('analysis-system-select').value;
+            if (!systemId) {
+                alert('システムを選択してください');
+                return;
+            }
+
+            const resultContainer = document.getElementById('log-analysis-result');
+            const analyzeButton = document.getElementById('analyze-logs');
+            
+            // ローディング表示
+            resultContainer.innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">分析中...</span>
+                    </div>
+                    <p class="mt-2">ログ分析を実行中...</p>
+                </div>
+            `;
+            analyzeButton.disabled = true;
+
+            try {
+                const response = await fetch('/api/logs/analysis', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        system_id: systemId,
+                        analysis_type: 'general'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.analysis) {
+                    resultContainer.innerHTML = `
+                        <div class="alert alert-success">
+                            <h5><i class="fas fa-check-circle me-2"></i>分析完了</h5>
+                            <p><strong>システム:</strong> ${data.system_id}</p>
+                            <p><strong>分析時刻:</strong> ${new Date(data.timestamp).toLocaleString()}</p>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h6><i class="fas fa-brain me-2"></i>分析結果</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="log-analysis-content">${data.analysis}</div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    resultContainer.innerHTML = `
+                        <div class="alert alert-danger">
+                            <h5><i class="fas fa-exclamation-triangle me-2"></i>分析エラー</h5>
+                            <p>${data.message || 'ログ分析に失敗しました'}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('ログ分析エラー:', error);
+                resultContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        <h5><i class="fas fa-exclamation-triangle me-2"></i>分析エラー</h5>
+                        <p>ログ分析中にエラーが発生しました</p>
+                    </div>
+                `;
+            } finally {
+                analyzeButton.disabled = false;
+            }
+        }
+
+        // 分析用システム一覧を読み込み
+        async function loadAnalysisSystems() {
+            try {
+                const response = await fetch('/api/logs/analysis-systems');
+                const data = await response.json();
+                
+                const select = document.getElementById('analysis-system-select');
+                select.innerHTML = '<option value="">システムを選択してください...</option>';
+                
+                if (data.success && data.systems) {
+                    data.systems.forEach(system => {
+                        const option = document.createElement('option');
+                        option.value = system.id;
+                        option.textContent = system.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('分析用システム一覧取得エラー:', error);
+            }
+        }
+
+        // 自動分析結果を折り畳み可能な形式で表示
+        function displayAutoAnalysisResults(results) {
+            const container = document.getElementById('log-analysis-result');
+            
+            if (!results || results.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted">分析結果がありません</div>';
+                return;
+            }
+            
+            let html = '<div class="auto-analysis-results">';
+            html += '<h5 class="mb-3"><i class="fas fa-robot text-primary"></i> 自動分析結果</h5>';
+            
+            results.forEach((result, index) => {
+                const systemId = result.system_id || result.system || 'Unknown';
+                const analysisData = result.analysis || {};
+                const status = analysisData.status || 'unknown';
+                const timestamp = result.timestamp || new Date().toISOString();
+                
+                // ステータスに応じた色とアイコン
+                let statusClass = 'secondary';
+                let statusIcon = 'fas fa-question-circle';
+                if (status === 'healthy') {
+                    statusClass = 'success';
+                    statusIcon = 'fas fa-check-circle';
+                } else if (status === 'warning') {
+                    statusClass = 'warning';
+                    statusIcon = 'fas fa-exclamation-triangle';
+                } else if (status === 'critical') {
+                    statusClass = 'danger';
+                    statusIcon = 'fas fa-times-circle';
+                }
+                
+                html += `
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-0">
+                                        <i class="${statusIcon} text-${statusClass}"></i>
+                                        ${systemId} - ${analysisData.summary || '分析結果'}
+                                    </h6>
+                                    <small class="text-muted">${new Date(timestamp).toLocaleString()}</small>
+                                </div>
+                                <button class="btn btn-sm btn-outline-${statusClass}" type="button" 
+                                        data-bs-toggle="collapse" 
+                                        data-bs-target="#analysis-${index}" 
+                                        aria-expanded="false" 
+                                        aria-controls="analysis-${index}">
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="collapse" id="analysis-${index}">
+                            <div class="card-body">
+                                <div class="analysis-content">
+                                    ${formatAnalysisContent(analysisData)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+            
+            // 折り畳みボタンのアイコンを動的に更新
+            document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
+                button.addEventListener('click', function() {
+                    const icon = this.querySelector('i');
+                    const target = document.querySelector(this.getAttribute('data-bs-target'));
+                    
+                    if (target.classList.contains('show')) {
+                        icon.className = 'fas fa-chevron-down';
+                    } else {
+                        icon.className = 'fas fa-chevron-up';
+                    }
+                });
+            });
+        }
+        
+        // 分析内容をフォーマット
+        function formatAnalysisContent(analysisData) {
+            let content = '';
+            
+            if (analysisData.overview) {
+                content += `
+                    <div class="mb-3">
+                        <h6 class="text-primary"><i class="fas fa-eye"></i> 概要</h6>
+                        <p class="mb-0">${analysisData.overview}</p>
+                    </div>
+                `;
+            }
+            
+            if (analysisData.issues && analysisData.issues.length > 0) {
+                content += `
+                    <div class="mb-3">
+                        <h6 class="text-warning"><i class="fas fa-exclamation-triangle"></i> 問題点</h6>
+                        <ul class="mb-0">
+                            ${analysisData.issues.map(issue => `<li>${issue}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+            
+            if (analysisData.recommendations && analysisData.recommendations.length > 0) {
+                content += `
+                    <div class="mb-3">
+                        <h6 class="text-info"><i class="fas fa-lightbulb"></i> 推奨アクション</h6>
+                        <ul class="mb-0">
+                            ${analysisData.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+            
+            if (analysisData.metrics) {
+                content += `
+                    <div class="mb-3">
+                        <h6 class="text-success"><i class="fas fa-chart-line"></i> 監視指標</h6>
+                        <div class="row">
+                            ${Object.entries(analysisData.metrics).map(([key, value]) => `
+                                <div class="col-md-6 mb-2">
+                                    <strong>${key}:</strong> ${value}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            if (analysisData.details) {
+                content += `
+                    <div class="mb-3">
+                        <h6 class="text-secondary"><i class="fas fa-info-circle"></i> 詳細情報</h6>
+                        <div class="analysis-details">
+                            ${analysisData.details}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // 既存の分析結果（文字列形式）も対応
+            if (typeof analysisData === 'string') {
+                content += `
+                    <div class="mb-3">
+                        <h6 class="text-secondary"><i class="fas fa-info-circle"></i> 分析結果</h6>
+                        <div class="analysis-details">
+                            ${analysisData}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            return content || '<p class="text-muted">詳細情報がありません</p>';
+        }
+
+        // 自動分析機能
+        async function autoAnalyze() {
+            const resultContainer = document.getElementById('log-analysis-result');
+            const autoAnalyzeButton = document.getElementById('auto-analyze');
+            
+            // ローディング表示
+            resultContainer.innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">分析中...</span>
+                    </div>
+                    <p class="mt-2">全システムのログ分析を実行中...</p>
+                </div>
+            `;
+            autoAnalyzeButton.disabled = true;
+
+            try {
+                // 利用可能なシステムを取得
+                const response = await fetch('/api/logs/text');
+                const data = await response.json();
+                
+                if (!data.success || !data.systems) {
+                    throw new Error('システム一覧の取得に失敗しました');
+                }
+
+                const systems = data.systems;
+                const analysisResults = [];
+
+                // 各システムを順次分析
+                for (let i = 0; i < systems.length; i++) {
+                    const system = systems[i];
+                    
+                    try {
+                        // 進捗表示を更新
+                        resultContainer.innerHTML = `
+                            <div class="text-center">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">分析中...</span>
+                                </div>
+                                <p class="mt-2">分析中... (${i + 1}/${systems.length}) - ${system.name}</p>
+                            </div>
+                        `;
+                        
+                        const analysisResponse = await fetch('/api/logs/analysis', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                system_id: system.id,
+                                analysis_type: 'comprehensive'
+                            })
+                        });
+                        
+                        const analysisData = await analysisResponse.json();
+                        if (analysisData.status === 'success') {
+                            analysisResults.push({
+                                system_id: system.id,
+                                system: system.name,
+                                analysis: analysisData.analysis,
+                                timestamp: new Date().toISOString()
+                            });
+                        } else {
+                            analysisResults.push({
+                                system_id: system.id,
+                                system: system.name,
+                                analysis: {
+                                    status: 'error',
+                                    summary: '分析エラー',
+                                    details: analysisData.message || '不明なエラーが発生しました'
+                                },
+                                timestamp: new Date().toISOString()
+                            });
+                        }
+                    } catch (error) {
+                        console.error(`${system.name}の分析エラー:`, error);
+                        analysisResults.push({
+                            system_id: system.id,
+                            system: system.name,
+                            analysis: {
+                                status: 'error',
+                                summary: '分析エラー',
+                                details: error.message
+                            },
+                            timestamp: new Date().toISOString()
+                        });
+                    }
+                }
+
+                // 結果を表示
+                displayAutoAnalysisResults(analysisResults);
+                
+            } catch (error) {
+                console.error('自動分析エラー:', error);
+                resultContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        <h5><i class="fas fa-exclamation-triangle me-2"></i>自動分析エラー</h5>
+                        <p>自動分析中にエラーが発生しました: ${error.message}</p>
+                    </div>
+                `;
+            } finally {
+                autoAnalyzeButton.disabled = false;
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             loadDockerContainers();
             loadTextSystems();
+            loadAnalysisSystems();
+            
+            // 分析実行ボタンのイベントリスナー
+            document.getElementById('analyze-logs').addEventListener('click', analyzeLogs);
+            document.getElementById('auto-analyze').addEventListener('click', autoAnalyze);
         });
 
         // Dockerコンテナ一覧を取得
@@ -210,26 +638,41 @@
                 const select = document.getElementById('container-select');
                 select.innerHTML = '<option value="">コンテナを選択してください...</option>';
                 
+                let containers = [];
+                
                 // 配列が直接返されている場合
                 if (Array.isArray(data)) {
-                    data.forEach(container => {
-                        const option = document.createElement('option');
-                        option.value = container.name;
-                        option.textContent = `${container.name} (${container.status})`;
-                        select.appendChild(option);
-                    });
+                    containers = data;
                 }
                 // オブジェクト形式の場合
                 else if (data.success && data.containers) {
-                    data.containers.forEach(container => {
-                        const option = document.createElement('option');
-                        option.value = container.name;
-                        option.textContent = `${container.name} (${container.status})`;
-                        select.appendChild(option);
+                    containers = data.containers;
+                }
+                
+                // コンテナを追加
+                if (containers.length > 0) {
+                    containers.forEach(container => {
+                        // コンテナ名が空でないことを確認
+                        if (container.name && container.name.trim()) {
+                            const option = document.createElement('option');
+                            option.value = container.name;
+                            const status = container.status || container.state || 'Unknown';
+                            option.textContent = `${container.name} (${status})`;
+                            select.appendChild(option);
+                        }
                     });
+                } else {
+                    // コンテナが見つからない場合
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'コンテナが見つかりません';
+                    option.disabled = true;
+                    select.appendChild(option);
                 }
             } catch (error) {
                 console.error('コンテナ一覧取得エラー:', error);
+                const select = document.getElementById('container-select');
+                select.innerHTML = '<option value="">コンテナ一覧の取得に失敗しました</option>';
             }
         }
 
@@ -266,25 +709,27 @@
             try {
                 const response = await fetch(`/api/logs/text/${systemId}`);
                 const data = await response.json();
-                
                 const container = document.getElementById('text-logs');
-                const stats = document.getElementById('text-log-stats');
                 
-                if (data.success && data.logs) {
-                    let html = '';
+                if (data.success && data.logs && data.logs.length > 0) {
+                    let html = '<div class="log-stats">';
+                    html += `<strong>システム:</strong> ${systemId} | `;
+                    html += `<strong>ログ行数:</strong> ${data.logs.length}`;
+                    html += '</div>';
+                    
                     data.logs.forEach(log => {
-                        const lineClass = getLogLevelClass(log);
-                        html += `<div class="log-line ${lineClass}">${log}</div>`;
+                        // テキストログは文字列の配列なので、そのまま表示
+                        const logClass = getLogLevelClass(log);
+                        html += `<div class="log-entry ${logClass}">${log}</div>`;
                     });
+                    
                     container.innerHTML = html;
-                    stats.textContent = `システム: ${systemId} | ログ行数: ${data.logs.length}`;
                 } else {
                     container.innerHTML = '<div class="text-center text-muted">ログが見つかりません</div>';
-                    stats.textContent = `システム: ${systemId} | ログなし`;
                 }
             } catch (error) {
                 console.error('テキストログ取得エラー:', error);
-                document.getElementById('text-logs').innerHTML = '<div class="text-center text-danger">ログ取得エラー</div>';
+                document.getElementById('text-logs').innerHTML = '<div class="text-center text-muted">ログの取得に失敗しました</div>';
             }
         }
 
@@ -361,10 +806,7 @@
 
         // イベントリスナー
         document.getElementById('container-select').addEventListener('change', loadDockerLogs);
-        document.getElementById('refresh-docker-logs').addEventListener('click', loadDockerLogs);
         document.getElementById('text-system-select').addEventListener('change', loadTextLogs);
-        document.getElementById('refresh-text-logs').addEventListener('click', loadTextLogs);
-        document.getElementById('toggle-auto-refresh').addEventListener('click', toggleAutoRefresh);
     </script>
 </body>
 </html>

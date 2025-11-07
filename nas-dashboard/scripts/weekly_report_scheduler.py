@@ -44,7 +44,8 @@ def send_weekly_report():
         report_content = generate_report_content(system_data, fail2ban_data, docker_data)
         
         # レポートファイルを保存
-        if os.getenv('NAS_MODE') == 'true':
+        # NAS環境では統合データディレクトリを使用、ローカル環境では相対パスを使用
+        if os.getenv('NAS_MODE') == 'true' and os.path.exists('/app/reports'):
             report_dir = Path('/app/reports')
         else:
             report_dir = Path('/Users/Yoshi/nas-project/data/reports')

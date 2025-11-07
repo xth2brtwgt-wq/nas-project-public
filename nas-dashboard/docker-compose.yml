@@ -10,17 +10,18 @@ services:
       # Dockerソケットをマウント（Dockerコマンド実行のため）
       - /var/run/docker.sock:/var/run/docker.sock
       # NAS環境のプロジェクトディレクトリをマウント
-      - /home/AdminUser/nas-project:/nas-project:ro
+      - ~/nas-project:/nas-project:ro
       # 統合データディレクトリをマウント（ログファイルアクセスのため）
-      - /home/AdminUser/nas-project-data:/nas-project-data:ro
+      # 認証データベースの書き込みのためにrw（読み書き可能）に変更
+      - ~/nas-project-data:/nas-project-data:rw
       # ログディレクトリ
-      - ./logs:/app/logs
+      - ~/nas-project-data/nas-dashboard/logs:/app/logs
       # バックアップディレクトリ
-      - /home/AdminUser/nas-project-data/nas-dashboard/backups:/app/backups
+      - ~/nas-project-data/nas-dashboard/backups:/app/backups
       # レポートディレクトリ
-      - /home/AdminUser/nas-project-data/nas-dashboard/reports:/app/reports
+      - ~/nas-project-data/nas-dashboard/reports:/app/reports
       # SSH鍵をマウント（UPS情報取得のため）
-      - /home/AdminUser/.ssh:/root/.ssh
+      - ~/.ssh:/root/.ssh
     environment:
       - TZ=Asia/Tokyo
       - FLASK_ENV=production
@@ -33,28 +34,56 @@ services:
     networks:
       - nas-network
 
-  weekly-report-scheduler:
+  # weekly-report-scheduler:  # 2重送信問題のため無効化
+  #   build: .
+  #   image: nas-dashboard:latest
+  #   container_name: nas-dashboard-scheduler
+  #   user: root
+  #   volumes:
+  #     # Dockerソケットをマウント（Dockerコマンド実行のため）
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #     # NAS環境のプロジェクトディレクトリをマウント
+  #     - ~/nas-project:/nas-project:ro
+  #     # 統合データディレクトリをマウント（ログファイルアクセスのため）
+  #     - ~/nas-project-data:/nas-project-data:ro
+  #     # ログディレクトリ
+  #     - ./logs:/app/logs
+  #     # レポートディレクトリ
+  #     - ~/nas-project-data/nas-dashboard/reports:/app/reports
+  #   environment:
+  #     - TZ=Asia/Tokyo
+  #     - NAS_MODE=true
+  #   env_file:
+  #     - .env
+  #   command: ["python", "scripts/weekly_report_scheduler.py"]
+  #   restart: unless-stopped
+  #   labels:
+  #     - "com.centurylinklabs.watchtower.enable=true"
+  #   networks:
+  #     - nas-network
+
+  monthly-ai-report-scheduler:
     build: .
     image: nas-dashboard:latest
-    container_name: nas-dashboard-scheduler
+    container_name: nas-dashboard-monthly-scheduler
     user: root
     volumes:
       # Dockerソケットをマウント（Dockerコマンド実行のため）
       - /var/run/docker.sock:/var/run/docker.sock
       # NAS環境のプロジェクトディレクトリをマウント
-      - /home/AdminUser/nas-project:/nas-project:ro
+      - ~/nas-project:/nas-project:ro
       # 統合データディレクトリをマウント（ログファイルアクセスのため）
-      - /home/AdminUser/nas-project-data:/nas-project-data:ro
+      - ~/nas-project-data:/nas-project-data:ro
       # ログディレクトリ
-      - ./logs:/app/logs
+      - ~/nas-project-data/nas-dashboard/logs:/app/logs
       # レポートディレクトリ
-      - /home/AdminUser/nas-project-data/nas-dashboard/reports:/app/reports
+      - ~/nas-project-data/nas-dashboard/reports:/app/reports
     environment:
       - TZ=Asia/Tokyo
       - NAS_MODE=true
     env_file:
       - .env
-    command: ["python", "scripts/weekly_report_scheduler.py"]
+    command: ["python", "scripts/monthly_ai_report_scheduler.py"]
     restart: unless-stopped
     labels:
       - "com.centurylinklabs.watchtower.enable=true"

@@ -98,6 +98,40 @@ NAS統合管理システム
             logger.error(f"エラー通知メール送信エラー: {str(e)}")
             raise Exception(f"エラー通知メール送信に失敗しました: {str(e)}")
     
+    def send_monthly_ai_report(self, to_email: str, report_content: str, report_data: Dict[str, Any]) -> bool:
+        """月次AI分析レポートをメールで送信"""
+        try:
+            if not self.email_user or not self.email_password:
+                raise Exception("メール設定が不完全です")
+            
+            # メールの作成
+            msg = MIMEMultipart()
+            msg['From'] = self.email_from
+            msg['To'] = to_email
+            
+            # 件名の設定
+            current_date = datetime.now().strftime('%Y年%m月')
+            msg['Subject'] = f"[NAS管理] 月次AI分析セキュリティレポート - {current_date}"
+            
+            # メール本文の作成
+            body = self._create_monthly_ai_report_body(report_content, report_data)
+            msg.attach(MIMEText(body, 'plain', 'utf-8'))
+            
+            # メール送信
+            server = smtplib.SMTP(self.smtp_server, self.smtp_port)
+            server.starttls()
+            server.login(self.email_user, self.email_password)
+            text = msg.as_string()
+            server.sendmail(self.email_from, to_email, text)
+            server.quit()
+            
+            logger.info(f"月次AI分析レポートメール送信完了: {to_email}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"月次AI分析レポートメール送信エラー: {str(e)}")
+            raise Exception(f"メール送信に失敗しました: {str(e)}")
+    
     def send_monthly_report(self, to_email: str, report_content: str, ai_analysis: Dict[str, Any]) -> bool:
         """月次AI分析レポートをメールで送信"""
         try:
@@ -238,6 +272,93 @@ NAS統合管理システム - 週次レポート
 ---
 このレポートは自動生成されました。
 NAS統合管理システム
+        """
+        
+        return body
+    
+    def _create_monthly_ai_report_body(self, report_content: str, report_data: Dict[str, Any]) -> str:
+        """月次AI分析レポートの本文を作成"""
+        current_date = datetime.now().strftime('%Y年%m月')
+        
+        # レポートデータから重要な情報を抽出
+        # report_dataはgenerate_monthly_ai_report_dataの返り値またはreport_dataディクショナリ
+        # 2つの形式に対応
+        if 'ai_analysis' in report_data:
+            # generate_monthly_ai_report_dataの返り値形式
+            ai_analysis = report_data.get('ai_analysis', {})
+            fail2ban_data = report_data.get('security_metrics', {})
+            system_data = report_data.get('system_metrics', {})
+            docker_data = report_data.get('container_metrics', {})
+            
+            total_banned = fail2ban_data.get('total_bans', 0)
+            active_jails = fail2ban_data.get('active_jails', 0)
+            cpu_percent = system_data.get('cpu_usage', 0)
+            memory_percent = system_data.get('memory_usage', 0)
+            disk_percent = system_data.get('disk_usage', 0)
+            running_containers = docker_data.get('running_containers', 0)
+            total_containers = docker_data.get('total_containers', 0)
+        else:
+            # report_dataディクショナリ形式（後方互換性）
+            fail2ban_data = report_data.get('fail2ban_data', {})
+            system_data = report_data.get('system_data', {})
+            docker_data = report_data.get('docker_data', {})
+            ai_analysis = {}
+            
+            total_banned = fail2ban_data.get('total_banned', 0)
+            active_jails = fail2ban_data.get('active_jails', 0)
+            cpu_percent = system_data.get('cpu_percent', 0)
+            memory_percent = system_data.get('memory_percent', 0)
+            disk_percent = system_data.get('disk_percent', 0)
+            running_containers = docker_data.get('running_containers', 0)
+            total_containers = docker_data.get('total_containers', 0)
+        
+        # AI分析結果を取得
+        summary = ai_analysis.get('summary', 'AI分析結果なし')
+        risk_level = ai_analysis.get('risk_level', 'UNKNOWN')
+        insights = ai_analysis.get('insights', [])
+        recommendations = ai_analysis.get('recommendations', [])
+        trends = ai_analysis.get('trends', {})
+        
+        # 洞察と推奨事項のフォーマット
+        insights_text = '\n'.join([f'- {i}' for i in insights]) if insights else '- 重要な洞察なし'
+        recommendations_text = '\n'.join([f'- {r}' for r in recommendations]) if recommendations else '- 推奨事項なし'
+        
+        body = f"""
+🤖 NAS月次AI分析セキュリティレポート
+
+分析期間: {current_date}
+
+生成日時: {datetime.now().strftime('%Y年%m月%d日 %H:%M:%S')}
+
+【AI分析サマリー】
+{summary}
+
+【リスクレベル】
+{risk_level}
+
+【重要な洞察】
+{insights_text}
+
+【推奨事項】
+{recommendations_text}
+
+【セキュリティ状況サマリー】
+- 総BAN数: {total_banned}件
+- アクティブなJail数: {active_jails}個
+
+【システム状況サマリー】
+- CPU使用率: {cpu_percent:.1f}%
+- メモリ使用率: {memory_percent:.1f}%
+- ディスク使用率: {disk_percent:.1f}%
+
+【Dockerコンテナ状況サマリー】
+- 稼働中コンテナ: {running_containers}/{total_containers}個
+
+---
+このレポートはAI分析により自動生成されました。
+NAS統合管理システム - Gemini 2.0 Flash AI
+
+詳細なレポートファイルは `/app/reports/` ディレクトリに保存されています。
         """
         
         return body

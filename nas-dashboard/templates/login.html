@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ログイン - NAS-System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .login-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 3rem;
+            max-width: 400px;
+            width: 100%;
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .login-header h1 {
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        .login-header p {
+            color: #6c757d;
+            margin-bottom: 0;
+        }
+        .form-control {
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+            padding: 12px 16px;
+            transition: all 0.3s ease;
+        }
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 10px;
+            padding: 12px 30px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        .alert {
+            border-radius: 10px;
+            border: none;
+        }
+        .input-group-text {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-right: none;
+            border-radius: 10px 0 0 10px;
+        }
+        .input-group .form-control {
+            border-left: none;
+            border-radius: 0 10px 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1><i class="fas fa-tachometer-alt me-2"></i>NAS-System</h1>
+        </div>
+        
+        {% if error %}
+        <div class="alert alert-danger" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>{{ error }}
+        </div>
+        {% endif %}
+        
+        <form method="POST" action="{{ url_for('login') }}" id="loginForm">
+            {# nextパラメータをhidden inputとして保持 #}
+            {# GETリクエスト時（ログインページ表示時）のnextパラメータを保持 #}
+            {% set next_param = request.args.get('next') or '' %}
+            {# nextパラメータが存在する場合はhidden inputとして出力 #}
+            {% if next_param %}
+            <input type="hidden" name="next" id="nextInput" value="{{ next_param }}">
+            {# デバッグ用: ログに出力（本番環境では削除） #}
+            <script>
+                console.log('[AUTH] ログインフォームにnextパラメータが含まれています:', '{{ next_param }}');
+            </script>
+            {% else %}
+            {# nextパラメータが存在しない場合でも、フロントエンドでURLから取得して追加 #}
+            <input type="hidden" name="next" id="nextInput" value="">
+            {% endif %}
+            
+            <div class="mb-3">
+                <label for="username" class="form-label">
+                    <i class="fas fa-user me-2"></i>ユーザー名
+                </label>
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="fas fa-user"></i>
+                    </span>
+                    <input type="text" class="form-control" id="username" name="username" required autofocus>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <label for="password" class="form-label">
+                    <i class="fas fa-lock me-2"></i>パスワード
+                </label>
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="fas fa-lock"></i>
+                    </span>
+                    <input type="password" class="form-control" id="password" name="password" required>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-sign-in-alt me-2"></i>ログイン
+            </button>
+        </form>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // フロントエンドでnextパラメータを強制的に設定
+        // URLパラメータからnextを取得して、hidden inputに設定
+        (function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const nextParam = urlParams.get('next');
+            const nextInput = document.getElementById('nextInput');
+            
+            if (nextParam && nextInput) {
+                // URLパラメータにnextがある場合、hidden inputに設定
+                nextInput.value = nextParam;
+                console.log('[AUTH] フロントエンドでnextパラメータを設定:', nextParam);
+            } else if (nextInput && !nextInput.value) {
+                // nextパラメータがない場合でも、hidden inputを削除しない（空文字列のまま）
+                console.log('[AUTH] nextパラメータが見つかりませんでした');
+            }
+            
+            // フォーム送信時にnextパラメータが含まれているか確認
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm) {
+                loginForm.addEventListener('submit', function(e) {
+                    const formData = new FormData(loginForm);
+                    const nextValue = formData.get('next');
+                    console.log('[AUTH] フォーム送信時のnextパラメータ:', nextValue);
+                });
+            }
+        })();
+    </script>
+</body>
+</html>
+

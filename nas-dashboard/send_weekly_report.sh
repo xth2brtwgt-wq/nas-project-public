@@ -2,13 +2,13 @@
 # 週次レポート送信スクリプト
 # 作成日: Fri Oct 24 18:43:00 JST 2025
 
-cd /home/YOUR_USERNAME/nas-project/nas-dashboard
+cd ~/nas-project/nas-dashboard
 
 # ログファイル
-LOG_FILE="/home/YOUR_USERNAME/nas-project/nas-dashboard/logs/weekly_report.log"
+LOG_FILE="~/nas-project/nas-dashboard/logs/weekly_report.log"
 
 # ログディレクトリ作成
-mkdir -p /home/YOUR_USERNAME/nas-project/nas-dashboard/logs
+mkdir -p ~/nas-project/nas-dashboard/logs
 
 # ログ出力関数
 log() {
