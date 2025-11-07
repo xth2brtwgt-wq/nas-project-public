@@ -57,10 +57,10 @@
 
 ```bash
 # NASに接続
-ssh YOUR_USERNAME@YOUR_NAS_IP
+ssh -p 23456 YOUR_USERNAME@YOUR_IP_ADDRESS110
 
 # プロジェクトディレクトリに移動
-cd /home/YOUR_USERNAME/nas-project/document-automation
+cd ~/nas-project/document-automation
 ```
 
 #### 2. 環境変数の設定
@@ -115,10 +115,10 @@ MAX_CONCURRENT_TASKS=5  # クラウド処理なら余裕あり
 
 ```bash
 # ダウンロードしたサービスアカウントキーをコピー
-cp /path/to/downloaded-key.json /home/YOUR_USERNAME/nas-project/document-automation/config/google-credentials.json
+cp /path/to/downloaded-key.json ~/nas-project/document-automation/config/google-credentials.json
 
 # 権限設定
-chmod 600 /home/YOUR_USERNAME/nas-project/document-automation/config/google-credentials.json
+chmod 600 ~/nas-project/document-automation/config/google-credentials.json
 ```
 
 #### 4. デプロイスクリプトの実行
@@ -138,7 +138,7 @@ chmod +x deploy.sh
 curl http://localhost:8080/health
 
 # Web UIにアクセス
-# ブラウザで http://YOUR_NAS_IP:8080 を開く
+# ブラウザで http://YOUR_IP_ADDRESS110:8080 を開く
 ```
 
 ## 🔧 カスタマイズ設定

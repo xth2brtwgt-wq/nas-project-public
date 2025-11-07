@@ -5,8 +5,8 @@
 set -e
 
 # 設定
-UPLOAD_DIR="/home/YOUR_USERNAME/nas-project-data/youtube-to-notion/uploads"
-ARCHIVE_DIR="/home/YOUR_USERNAME/nas-project-data/youtube-to-notion/archive"
+UPLOAD_DIR="~/nas-project-data/youtube-to-notion/uploads"
+ARCHIVE_DIR="~/nas-project-data/youtube-to-notion/archive"
 MAX_AGE_HOURS=168  # 1週間（168時間）
 MAX_FILES=50       # 最大50ファイルまで保持
 
@@ -33,7 +33,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # ログ設定
-LOG_FILE="/home/YOUR_USERNAME/nas-project-data/youtube-to-notion/logs/cleanup_$(date +%Y%m%d_%H%M%S).log"
+LOG_FILE="~/nas-project-data/youtube-to-notion/logs/cleanup_$(date +%Y%m%d_%H%M%S).log"
 mkdir -p "$(dirname "$LOG_FILE")"
 
 # ログ関数

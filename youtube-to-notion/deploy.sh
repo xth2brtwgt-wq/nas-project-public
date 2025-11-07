@@ -5,26 +5,50 @@
 
 echo "🚀 YouTube-to-Notion デプロイを開始します..."
 
+# 0. .envファイルの保護（git pull前にバックアップ）
+echo "🔒 .envファイルを保護中..."
+if [ -f .env ]; then
+    # .envが存在する場合、.env.restoreにバックアップ
+    if [ ! -f .env.restore ] || [ .env -nt .env.restore ]; then
+        cp .env .env.restore
+        echo "✅ .envを.env.restoreにバックアップしました"
+    fi
+fi
+
 # 1. 最新コードを取得
 echo "📥 最新コードを取得中..."
 git pull origin main
 
-# 2. マウント先ディレクトリの確認・作成
-echo "📁 マウント先ディレクトリを確認中..."
-mkdir -p /home/YOUR_USERNAME/youtube-to-notion-data/uploads
-mkdir -p /home/YOUR_USERNAME/youtube-to-notion-data/outputs
-mkdir -p /home/YOUR_USERNAME/youtube-to-notion-data/cache
-mkdir -p /home/YOUR_USERNAME/youtube-to-notion-data/logs
-
-# 3. 環境変数ファイルの確認
+# 2. .envファイルの復元・確認（git pull後に復元）
 echo "🔧 環境変数ファイルを確認中..."
 if [ ! -f .env ]; then
-    echo "❌ .envファイルが見つかりません"
-    echo "📋 env.exampleをコピーして.envを作成してください"
-    cp env.example .env
-    echo "⚠️  .envファイルを編集してAPIキーを設定してください"
-    exit 1
+    echo "⚠️  .envファイルが見つかりません"
+    if [ -f .env.restore ]; then
+        echo "📋 .env.restoreから復元します..."
+        cp .env.restore .env
+        echo "✅ .envを復元しました"
+    elif [ -f env.example ]; then
+        echo "📋 env.exampleから作成します..."
+        cp env.example .env
+        echo "⚠️  .envファイルを編集してAPIキーを設定してください"
+    else
+        echo "❌ .envファイルが存在しません。手動で作成してください。"
+        exit 1
+    fi
+else
+    # .envが存在する場合、.env.restoreが新しければ更新
+    if [ -f .env.restore ] && [ .env.restore -nt .env ]; then
+        echo "⚠️  .env.restoreが.envより新しいです。復元しますか？"
+        echo "   現在の.envは保持されます（手動で復元が必要な場合は cp .env.restore .env を実行）"
+    fi
 fi
+
+# 3. マウント先ディレクトリの確認・作成
+echo "📁 マウント先ディレクトリを確認中..."
+mkdir -p ~/nas-project-data/youtube-to-notion/uploads
+mkdir -p ~/nas-project-data/youtube-to-notion/outputs
+mkdir -p ~/nas-project-data/youtube-to-notion/cache
+mkdir -p ~/nas-project-data/youtube-to-notion/logs
 
 # 4. Dockerコンテナを停止・削除
 echo "🛑 Dockerコンテナを停止中..."
@@ -74,6 +98,6 @@ else
 fi
 
 echo "🎉 デプロイが完了しました！"
-echo "🌐 アプリケーション: http://YOUR_NAS_IP:8111"
-echo "📊 ダッシュボード: http://YOUR_NAS_IP:9001"
-echo "📁 データディレクトリ: /home/YOUR_USERNAME/youtube-to-notion-data/"
+echo "🌐 アプリケーション: http://YOUR_IP_ADDRESS110:8111"
+echo "📊 ダッシュボード: http://YOUR_IP_ADDRESS110:9001"
+echo "📁 データディレクトリ: ~/nas-project-data/youtube-to-notion/"

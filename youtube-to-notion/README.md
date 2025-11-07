@@ -69,8 +69,8 @@ git clone <repository-url>
 cd youtube-to-notion
 
 # 環境変数ファイルの作成
-cp env.example .env.local
-nano .env.local  # APIキーを設定
+cp env.example .env.restore
+nano .env.restore  # APIキーを設定
 ```
 
 ### 3. デプロイ

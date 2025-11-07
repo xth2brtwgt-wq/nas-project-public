@@ -26,7 +26,7 @@ cd /Users/Yoshi/nas-project/amazon-analytics
 または手動で：
 
 ```bash
-docker-compose up -d  # .env.localが自動で優先されます
+docker-compose up -d  # .envを使用します
 ```
 
 ---
@@ -134,7 +134,7 @@ docker-compose logs db
 
 ```bash
 # Gemini APIキーを確認
-cat .env.local | grep GEMINI_API_KEY
+cat .env | grep GEMINI_API_KEY
 
 # コンテナを再起動
 docker-compose restart web

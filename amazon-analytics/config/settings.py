@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     
     # File paths
     BASE_DIR: Path = Path(__file__).resolve().parent.parent
+    # DATA_DIRはクラスインスタンス作成後に設定
     DATA_DIR: Path = BASE_DIR / "data"
     UPLOAD_DIR: Path = DATA_DIR / "uploads"
     PROCESSED_DIR: Path = DATA_DIR / "processed"
@@ -74,6 +75,14 @@ class Settings(BaseSettings):
 
 # Create settings instance
 settings = Settings()
+
+# NAS環境では/app/dataを使用、ローカル環境ではプロジェクト内のdataを使用
+if os.getenv('NAS_MODE') and os.path.exists('/app/data'):
+    settings.DATA_DIR = Path('/app/data')
+    settings.UPLOAD_DIR = settings.DATA_DIR / "uploads"
+    settings.PROCESSED_DIR = settings.DATA_DIR / "processed"
+    settings.EXPORT_DIR = settings.DATA_DIR / "exports"
+    settings.CACHE_DIR = settings.DATA_DIR / "cache"
 
 # Ensure directories exist
 for directory in [

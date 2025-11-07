@@ -2,6 +2,15 @@
 
 let categoryChart = null;
 
+// サブフォルダパスを取得（window.SUBFOLDER_PATHが設定されている場合）
+const subfolderPath = window.SUBFOLDER_PATH || '';
+
+// APIエンドポイントのパスを生成するヘルパー関数
+function apiPath(path) {
+    const apiPath = path.startsWith('/') ? path : `/${path}`;
+    return `${subfolderPath}${apiPath}`;
+}
+
 // Tab switching
 document.addEventListener('DOMContentLoaded', function() {
     // Tab buttons
@@ -72,7 +81,25 @@ function switchTab(tabName) {
 
 async function loadStatistics() {
     try {
-        const response = await fetch('/api/statistics');
+        const response = await fetch(apiPath('/api/statistics'), {
+            credentials: 'include',  // Cookieを含める
+            redirect: 'manual'  // リダイレクトを手動で処理
+        });
+        
+        // リダイレクトの場合は処理しない
+        if (response.status === 307 || response.status === 302) {
+            const location = response.headers.get('Location');
+            if (location && location.includes('/login')) {
+                console.log('認証が必要です。ログインページにリダイレクトします:', location);
+                window.location.href = location;
+                return;
+            }
+        }
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
         
         // Update stats
@@ -175,9 +202,10 @@ async function uploadFile(file) {
     progressFill.style.width = '50%';
     
     try {
-        const response = await fetch('/api/upload', {
+        const response = await fetch(apiPath('/api/upload'), {
             method: 'POST',
-            body: formData
+            body: formData,
+            credentials: 'include'  // Cookieを含める
         });
         
         const result = await response.json();
@@ -207,7 +235,9 @@ async function uploadFile(file) {
 
 async function loadImportHistory() {
     try {
-        const response = await fetch('/api/import-history');
+        const response = await fetch(apiPath('/api/import-history'), {
+            credentials: 'include'  // Cookieを含める
+        });
         const data = await response.json();
         
         const listDiv = document.getElementById('import-history-list');
@@ -235,7 +265,9 @@ async function loadImportHistory() {
 
 async function loadCategories() {
     try {
-        const response = await fetch('/api/categories');
+        const response = await fetch(apiPath('/api/categories'), {
+            credentials: 'include'  // Cookieを含める
+        });
         const data = await response.json();
         
         const select = document.getElementById('category-filter');
@@ -257,12 +289,30 @@ async function loadPurchases() {
     const category = document.getElementById('category-filter').value;
     
     try {
-        let url = '/api/purchases?limit=50';
+        let url = apiPath('/api/purchases?limit=50');
         if (category) {
             url += `&category=${encodeURIComponent(category)}`;
         }
         
-        const response = await fetch(url);
+        const response = await fetch(url, {
+            credentials: 'include',  // Cookieを含める
+            redirect: 'manual'  // リダイレクトを手動で処理
+        });
+        
+        // リダイレクトの場合は処理しない
+        if (response.status === 307 || response.status === 302) {
+            const location = response.headers.get('Location');
+            if (location && location.includes('/login')) {
+                console.log('認証が必要です。ログインページにリダイレクトします:', location);
+                window.location.href = location;
+                return;
+            }
+        }
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
         
         const listDiv = document.getElementById('purchases-list');
@@ -341,8 +391,9 @@ async function autoClassify() {
     analysisSection.appendChild(progressArea);
     
     try {
-        const response = await fetch('/api/analyze/classify', {
-            method: 'POST'
+        const response = await fetch(apiPath('/api/analyze/classify'), {
+            method: 'POST',
+            credentials: 'include'  // Cookieを含める
         });
         
         const result = await response.json();
@@ -410,7 +461,9 @@ async function analyzeImpulse() {
     `;
     
     try {
-        const response = await fetch('/api/analyze/impulse');
+        const response = await fetch(apiPath('/api/analyze/impulse'), {
+            credentials: 'include'  // Cookieを含める
+        });
         const data = await response.json();
         
         if (data.detected_patterns.length === 0) {
@@ -449,7 +502,9 @@ async function analyzeRecurring() {
     `;
     
     try {
-        const response = await fetch('/api/analyze/recurring');
+        const response = await fetch(apiPath('/api/analyze/recurring'), {
+            credentials: 'include'  // Cookieを含める
+        });
         const data = await response.json();
         
         if (data.recurring_purchases.length === 0) {
@@ -489,7 +544,9 @@ async function generateInsights() {
     `;
     
     try {
-        const response = await fetch(`/api/analyze/monthly-insights?year=${year}&month=${month}`);
+        const response = await fetch(apiPath(`/api/analyze/monthly-insights?year=${year}&month=${month}`), {
+            credentials: 'include'  // Cookieを含める
+        });
         const data = await response.json();
         
         resultsDiv.innerHTML = `

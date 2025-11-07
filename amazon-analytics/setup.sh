@@ -67,8 +67,14 @@ if [[ $RUN_TEST == "y" || $RUN_TEST == "Y" ]]; then
         echo -e "${GREEN}✓ セットアップテスト完了${NC}"
     else
         echo -e "${YELLOW}⚠ テストで警告がありました${NC}"
-        echo -e "${YELLOW}Gemini APIキーを.env.localに設定してください${NC}"
+        echo -e "${YELLOW}Gemini APIキーを.envに設定してください${NC}"
     fi
+fi
+
+# .env.restoreの作成を推奨
+if [ -f .env ] && [ ! -f .env.restore ]; then
+    echo -e "${YELLOW}⚠ .env.restoreを作成することを推奨します（バックアップ用）${NC}"
+    echo -e "${BLUE}cp .env .env.restore${NC}"
 fi
 
 echo ""
@@ -77,13 +83,16 @@ echo -e "${GREEN}✓ セットアップ完了${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo ""
 echo -e "次のステップ:"
-echo -e "1. ${YELLOW}.env.local${NC}を編集してAPIキーを設定"
-echo -e "   ${BLUE}nano .env.local${NC}"
+echo -e "1. ${YELLOW}.env${NC}を編集してAPIキーを設定"
+echo -e "   ${BLUE}nano .env${NC}"
 echo ""
-echo -e "2. アプリケーションを起動"
+echo -e "2. ${YELLOW}.env.restore${NC}を作成（バックアップ用、推奨）"
+echo -e "   ${BLUE}cp .env .env.restore${NC}"
+echo ""
+echo -e "3. アプリケーションを起動"
 echo -e "   ${BLUE}./deploy.sh build${NC}"
 echo ""
-echo -e "3. ブラウザでアクセス"
+echo -e "4. ブラウザでアクセス"
 echo -e "   ${BLUE}http://localhost:8000${NC}"
 echo ""
 

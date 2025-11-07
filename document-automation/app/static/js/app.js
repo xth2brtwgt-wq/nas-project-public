@@ -1,18 +1,46 @@
 // ドキュメント自動処理システム - フロントエンドロジック
 
+// サブフォルダパスを取得（window.SUBFOLDER_PATHが設定されている場合）
+const subfolderPath = window.SUBFOLDER_PATH || '';
+
+// APIエンドポイントのパスを生成するヘルパー関数
+function apiPath(path) {
+    const apiPath = path.startsWith('/') ? path : `/${path}`;
+    return `${subfolderPath}${apiPath}`;
+}
+
 let selectedDocuments = new Set();
 let currentDocumentId = null;
 
 // 初期化
 document.addEventListener('DOMContentLoaded', () => {
-    loadSystemStatus();
-    loadStatistics();
-    loadDocuments();
-    loadCategories();
-    setupEventListeners();
-    setupRAGEventListeners();
-    loadRAGFilters();
-    loadRAGHistory();
+    // ログイン後のリダイレクトの場合、Cookieの反映を待つため少し遅延させる
+    // URLにnextパラメータが含まれている場合は、ログイン直後の可能性があるため
+    // 注意: HttpOnlyクッキーはJavaScriptから読み取れないため、document.cookieでは確認できない
+    const isLoginRedirect = window.location.search.includes('next=');
+    
+    if (isLoginRedirect) {
+        // ログイン直後の場合は、Cookieの反映を待つため500ms待機
+        setTimeout(() => {
+            loadSystemStatus();
+            loadStatistics();
+            loadDocuments();
+            loadCategories();
+            setupEventListeners();
+            setupRAGEventListeners();
+            loadRAGFilters();
+            loadRAGHistory();
+        }, 500);
+    } else {
+        loadSystemStatus();
+        loadStatistics();
+        loadDocuments();
+        loadCategories();
+        setupEventListeners();
+        setupRAGEventListeners();
+        loadRAGFilters();
+        loadRAGHistory();
+    }
     
     // 5秒ごとに統計情報を更新
     setInterval(loadStatistics, 5000);
@@ -91,13 +119,27 @@ async function performRAGSearch() {
         };
         
         // API呼び出し
-        const response = await fetch('/api/rag/query', {
+        const response = await fetch(apiPath('/api/rag/query'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(requestData)
         });
+        
+        // ステータスコード0（ネットワークエラーなど）の場合
+        // HttpOnlyクッキーはJavaScriptから読み取れないため、
+        // セッションクッキーの有無を確認できない
+        // そのため、ステータスコード0の場合はすぐにリダイレクトせず、
+        // 少し待ってから再試行する
+        if (response.status === 0) {
+            console.log('[AUTH] ネットワークエラーが検出されました（ステータスコード0）。1秒後に再試行します。');
+            // ステータスコード0の場合は、1秒待ってから再試行
+            setTimeout(() => {
+                loadSystemStatus();
+            }, 1000);
+            return;
+        }
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -229,7 +271,21 @@ function updateSimilarityValue() {
 // RAGフィルタオプションの読み込み
 async function loadRAGFilters() {
     try {
-        const response = await fetch('/api/rag/filters');
+        const response = await fetch(apiPath('/api/rag/filters'));
+        // ステータスコード0（ネットワークエラーなど）の場合
+        // HttpOnlyクッキーはJavaScriptから読み取れないため、
+        // セッションクッキーの有無を確認できない
+        // そのため、ステータスコード0の場合はすぐにリダイレクトせず、
+        // 少し待ってから再試行する
+        if (response.status === 0) {
+            console.log('[AUTH] ネットワークエラーが検出されました（ステータスコード0）。1秒後に再試行します。');
+            // ステータスコード0の場合は、1秒待ってから再試行
+            setTimeout(() => {
+                loadSystemStatus();
+            }, 1000);
+            return;
+        }
+        
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -259,7 +315,21 @@ async function loadRAGFilters() {
 // RAG検索履歴の読み込み
 async function loadRAGHistory() {
     try {
-        const response = await fetch('/api/rag/queries?limit=10');
+        const response = await fetch(apiPath('/api/rag/queries?limit=10'));
+        // ステータスコード0（ネットワークエラーなど）の場合
+        // HttpOnlyクッキーはJavaScriptから読み取れないため、
+        // セッションクッキーの有無を確認できない
+        // そのため、ステータスコード0の場合はすぐにリダイレクトせず、
+        // 少し待ってから再試行する
+        if (response.status === 0) {
+            console.log('[AUTH] ネットワークエラーが検出されました（ステータスコード0）。1秒後に再試行します。');
+            // ステータスコード0の場合は、1秒待ってから再試行
+            setTimeout(() => {
+                loadSystemStatus();
+            }, 1000);
+            return;
+        }
+        
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -292,7 +362,21 @@ async function loadRAGHistory() {
 // 特定のRAGクエリを読み込み
 async function loadRAGQuery(queryId) {
     try {
-        const response = await fetch(`/api/rag/queries/${queryId}`);
+        const response = await fetch(apiPath(`/api/rag/queries/${queryId}`));
+        // ステータスコード0（ネットワークエラーなど）の場合
+        // HttpOnlyクッキーはJavaScriptから読み取れないため、
+        // セッションクッキーの有無を確認できない
+        // そのため、ステータスコード0の場合はすぐにリダイレクトせず、
+        // 少し待ってから再試行する
+        if (response.status === 0) {
+            console.log('[AUTH] ネットワークエラーが検出されました（ステータスコード0）。1秒後に再試行します。');
+            // ステータスコード0の場合は、1秒待ってから再試行
+            setTimeout(() => {
+                loadSystemStatus();
+            }, 1000);
+            return;
+        }
+        
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -405,10 +489,90 @@ function updateFileCount(count) {
     }
 }
 
-// システムステータス読み込み
+// システムステータス読み込み（再試行回数を追跡）
+let systemStatusRetryCount = 0;
+const MAX_RETRY_COUNT = 3;
+
 async function loadSystemStatus() {
     try {
-        const response = await fetch('/status');
+        const response = await fetch(apiPath('/status'), {
+            credentials: 'include',  // Cookieを含める
+            redirect: 'manual'  // リダイレクトを手動で処理
+        });
+        
+        // リダイレクトの場合は処理しない
+        if (response.status === 307 || response.status === 302) {
+            const location = response.headers.get('Location');
+            if (location && location.includes('/login')) {
+                // ログイン直後の可能性がある場合は、少し待機してから再試行
+                // URLにnextパラメータが含まれている場合は、ログイン直後の可能性が高い
+                if (window.location.search.includes('next=')) {
+                    console.log('[AUTH] ログイン直後の可能性があります。認証チェックをスキップします。');
+                    return; // リダイレクトしない
+                }
+                // ログイン直後でない場合は、ログインページにリダイレクト
+                // ただし、セッションクッキーが存在する場合は、クッキーの検出に問題がある可能性があるため、
+                // 少し待機してから再試行する
+                const hasCookie = document.cookie.includes('session_id=');
+                if (hasCookie) {
+                    console.log('[AUTH] セッションクッキーは存在しますが、認証エラーが返されました。再試行します...');
+                    // 少し待機してから再試行（クッキーの反映を待つ）
+                    setTimeout(() => {
+                        // 再試行（関数名で判定）
+                        const functionName = arguments.callee.caller ? arguments.callee.caller.name : '';
+                        if (functionName === 'loadSystemStatus' || arguments.callee.caller === loadSystemStatus) {
+                            loadSystemStatus();
+                        } else if (functionName === 'loadStatistics' || arguments.callee.caller === loadStatistics) {
+                            loadStatistics();
+                        } else if (functionName === 'loadDocuments' || arguments.callee.caller === loadDocuments) {
+                            loadDocuments();
+                        } else if (functionName === 'loadCategories' || arguments.callee.caller === loadCategories) {
+                            loadCategories();
+                        }
+                    }, 1000);
+                    return;
+                }
+                // セッションクッキーが存在しない場合は、ログインページにリダイレクト
+                const currentPath = window.location.pathname;
+                const loginUrl = location.includes('next=') ? location : `${location}?next=${encodeURIComponent(currentPath)}`;
+                console.log('[AUTH] 認証が必要です。ログインページにリダイレクトします:', loginUrl);
+                window.location.href = loginUrl;
+                return;
+            }
+        }
+        
+        // ステータスコード0（ネットワークエラーなど）の場合
+        // HttpOnlyクッキーはJavaScriptから読み取れないため、
+        // セッションクッキーの有無を確認できない
+        // そのため、ステータスコード0の場合はすぐにリダイレクトせず、
+        // 少し待ってから再試行する（ただし、再試行回数に制限を設ける）
+        if (response.status === 0) {
+            systemStatusRetryCount++;
+            if (systemStatusRetryCount <= MAX_RETRY_COUNT) {
+                console.log(`[AUTH] ネットワークエラーが検出されました（ステータスコード0）。${systemStatusRetryCount}回目の再試行（最大${MAX_RETRY_COUNT}回）。1秒後に再試行します。`);
+                // ステータスコード0の場合は、1秒待ってから再試行
+                setTimeout(() => {
+                    loadSystemStatus();
+                }, 1000);
+                return;
+            } else {
+                console.error('[AUTH] ネットワークエラーが継続しています。再試行を中止します。');
+                // エラーメッセージを表示
+                document.getElementById('processing-mode').textContent = 'エラー: ネットワークエラー';
+                document.getElementById('ocr-engine').textContent = 'エラー: ネットワークエラー';
+                document.getElementById('ai-provider').textContent = 'エラー: ネットワークエラー';
+                systemStatusRetryCount = 0; // リセット
+                return;
+            }
+        }
+        
+        // 成功した場合はリトライカウントをリセット
+        systemStatusRetryCount = 0;
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
         
         // バージョン情報を表示
@@ -434,7 +598,70 @@ async function loadSystemStatus() {
 // 統計情報読み込み
 async function loadStatistics() {
     try {
-        const response = await fetch('/api/stats');
+        const response = await fetch(apiPath('/api/stats'), {
+            credentials: 'include',  // Cookieを含める
+            redirect: 'manual'  // リダイレクトを手動で処理
+        });
+        
+        // リダイレクトの場合は処理しない
+        if (response.status === 307 || response.status === 302) {
+            const location = response.headers.get('Location');
+            if (location && location.includes('/login')) {
+                // ログイン直後の可能性がある場合は、少し待機してから再試行
+                // URLにnextパラメータが含まれている場合は、ログイン直後の可能性が高い
+                if (window.location.search.includes('next=')) {
+                    console.log('[AUTH] ログイン直後の可能性があります。認証チェックをスキップします。');
+                    return; // リダイレクトしない
+                }
+                // ログイン直後でない場合は、ログインページにリダイレクト
+                // ただし、セッションクッキーが存在する場合は、クッキーの検出に問題がある可能性があるため、
+                // 少し待機してから再試行する
+                const hasCookie = document.cookie.includes('session_id=');
+                if (hasCookie) {
+                    console.log('[AUTH] セッションクッキーは存在しますが、認証エラーが返されました。再試行します...');
+                    // 少し待機してから再試行（クッキーの反映を待つ）
+                    setTimeout(() => {
+                        // 再試行（関数名で判定）
+                        const functionName = arguments.callee.caller ? arguments.callee.caller.name : '';
+                        if (functionName === 'loadSystemStatus' || arguments.callee.caller === loadSystemStatus) {
+                            loadSystemStatus();
+                        } else if (functionName === 'loadStatistics' || arguments.callee.caller === loadStatistics) {
+                            loadStatistics();
+                        } else if (functionName === 'loadDocuments' || arguments.callee.caller === loadDocuments) {
+                            loadDocuments();
+                        } else if (functionName === 'loadCategories' || arguments.callee.caller === loadCategories) {
+                            loadCategories();
+                        }
+                    }, 1000);
+                    return;
+                }
+                // セッションクッキーが存在しない場合は、ログインページにリダイレクト
+                const currentPath = window.location.pathname;
+                const loginUrl = location.includes('next=') ? location : `${location}?next=${encodeURIComponent(currentPath)}`;
+                console.log('[AUTH] 認証が必要です。ログインページにリダイレクトします:', loginUrl);
+                window.location.href = loginUrl;
+                return;
+            }
+        }
+        
+        // ステータスコード0（ネットワークエラーなど）の場合
+        // HttpOnlyクッキーはJavaScriptから読み取れないため、
+        // セッションクッキーの有無を確認できない
+        // そのため、ステータスコード0の場合はすぐにリダイレクトせず、
+        // 少し待ってから再試行する
+        if (response.status === 0) {
+            console.log('[AUTH] ネットワークエラーが検出されました（ステータスコード0）。1秒後に再試行します。');
+            // ステータスコード0の場合は、1秒待ってから再試行
+            setTimeout(() => {
+                loadSystemStatus();
+            }, 1000);
+            return;
+        }
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
         
         document.getElementById('total-docs').textContent = data.total_documents;
@@ -449,7 +676,70 @@ async function loadStatistics() {
 // カテゴリ一覧読み込み
 async function loadCategories() {
     try {
-        const response = await fetch('/api/categories');
+        const response = await fetch(apiPath('/api/categories'), {
+            credentials: 'include',  // Cookieを含める
+            redirect: 'manual'  // リダイレクトを手動で処理
+        });
+        
+        // リダイレクトの場合は処理しない
+        if (response.status === 307 || response.status === 302) {
+            const location = response.headers.get('Location');
+            if (location && location.includes('/login')) {
+                // ログイン直後の可能性がある場合は、少し待機してから再試行
+                // URLにnextパラメータが含まれている場合は、ログイン直後の可能性が高い
+                if (window.location.search.includes('next=')) {
+                    console.log('[AUTH] ログイン直後の可能性があります。認証チェックをスキップします。');
+                    return; // リダイレクトしない
+                }
+                // ログイン直後でない場合は、ログインページにリダイレクト
+                // ただし、セッションクッキーが存在する場合は、クッキーの検出に問題がある可能性があるため、
+                // 少し待機してから再試行する
+                const hasCookie = document.cookie.includes('session_id=');
+                if (hasCookie) {
+                    console.log('[AUTH] セッションクッキーは存在しますが、認証エラーが返されました。再試行します...');
+                    // 少し待機してから再試行（クッキーの反映を待つ）
+                    setTimeout(() => {
+                        // 再試行（関数名で判定）
+                        const functionName = arguments.callee.caller ? arguments.callee.caller.name : '';
+                        if (functionName === 'loadSystemStatus' || arguments.callee.caller === loadSystemStatus) {
+                            loadSystemStatus();
+                        } else if (functionName === 'loadStatistics' || arguments.callee.caller === loadStatistics) {
+                            loadStatistics();
+                        } else if (functionName === 'loadDocuments' || arguments.callee.caller === loadDocuments) {
+                            loadDocuments();
+                        } else if (functionName === 'loadCategories' || arguments.callee.caller === loadCategories) {
+                            loadCategories();
+                        }
+                    }, 1000);
+                    return;
+                }
+                // セッションクッキーが存在しない場合は、ログインページにリダイレクト
+                const currentPath = window.location.pathname;
+                const loginUrl = location.includes('next=') ? location : `${location}?next=${encodeURIComponent(currentPath)}`;
+                console.log('[AUTH] 認証が必要です。ログインページにリダイレクトします:', loginUrl);
+                window.location.href = loginUrl;
+                return;
+            }
+        }
+        
+        // ステータスコード0（ネットワークエラーなど）の場合
+        // HttpOnlyクッキーはJavaScriptから読み取れないため、
+        // セッションクッキーの有無を確認できない
+        // そのため、ステータスコード0の場合はすぐにリダイレクトせず、
+        // 少し待ってから再試行する
+        if (response.status === 0) {
+            console.log('[AUTH] ネットワークエラーが検出されました（ステータスコード0）。1秒後に再試行します。');
+            // ステータスコード0の場合は、1秒待ってから再試行
+            setTimeout(() => {
+                loadSystemStatus();
+            }, 1000);
+            return;
+        }
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
         
         const select = document.getElementById('category-filter');
@@ -471,12 +761,75 @@ async function loadDocuments() {
         const status = document.getElementById('status-filter').value;
         const category = document.getElementById('category-filter').value;
         
-        let url = '/api/documents?';
+        let url = apiPath('/api/documents?');
         if (search) url += `search=${encodeURIComponent(search)}&`;
         if (status) url += `status=${status}&`;
         if (category) url += `category=${encodeURIComponent(category)}&`;
         
-        const response = await fetch(url);
+        const response = await fetch(url, {
+            credentials: 'include',  // Cookieを含める
+            redirect: 'manual'  // リダイレクトを手動で処理
+        });
+        
+        // リダイレクトの場合は処理しない
+        if (response.status === 307 || response.status === 302) {
+            const location = response.headers.get('Location');
+            if (location && location.includes('/login')) {
+                // ログイン直後の可能性がある場合は、少し待機してから再試行
+                // URLにnextパラメータが含まれている場合は、ログイン直後の可能性が高い
+                if (window.location.search.includes('next=')) {
+                    console.log('[AUTH] ログイン直後の可能性があります。認証チェックをスキップします。');
+                    return; // リダイレクトしない
+                }
+                // ログイン直後でない場合は、ログインページにリダイレクト
+                // ただし、セッションクッキーが存在する場合は、クッキーの検出に問題がある可能性があるため、
+                // 少し待機してから再試行する
+                const hasCookie = document.cookie.includes('session_id=');
+                if (hasCookie) {
+                    console.log('[AUTH] セッションクッキーは存在しますが、認証エラーが返されました。再試行します...');
+                    // 少し待機してから再試行（クッキーの反映を待つ）
+                    setTimeout(() => {
+                        // 再試行（関数名で判定）
+                        const functionName = arguments.callee.caller ? arguments.callee.caller.name : '';
+                        if (functionName === 'loadSystemStatus' || arguments.callee.caller === loadSystemStatus) {
+                            loadSystemStatus();
+                        } else if (functionName === 'loadStatistics' || arguments.callee.caller === loadStatistics) {
+                            loadStatistics();
+                        } else if (functionName === 'loadDocuments' || arguments.callee.caller === loadDocuments) {
+                            loadDocuments();
+                        } else if (functionName === 'loadCategories' || arguments.callee.caller === loadCategories) {
+                            loadCategories();
+                        }
+                    }, 1000);
+                    return;
+                }
+                // セッションクッキーが存在しない場合は、ログインページにリダイレクト
+                const currentPath = window.location.pathname;
+                const loginUrl = location.includes('next=') ? location : `${location}?next=${encodeURIComponent(currentPath)}`;
+                console.log('[AUTH] 認証が必要です。ログインページにリダイレクトします:', loginUrl);
+                window.location.href = loginUrl;
+                return;
+            }
+        }
+        
+        // ステータスコード0（ネットワークエラーなど）の場合
+        // HttpOnlyクッキーはJavaScriptから読み取れないため、
+        // セッションクッキーの有無を確認できない
+        // そのため、ステータスコード0の場合はすぐにリダイレクトせず、
+        // 少し待ってから再試行する
+        if (response.status === 0) {
+            console.log('[AUTH] ネットワークエラーが検出されました（ステータスコード0）。1秒後に再試行します。');
+            // ステータスコード0の場合は、1秒待ってから再試行
+            setTimeout(() => {
+                loadSystemStatus();
+            }, 1000);
+            return;
+        }
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
         
         const tbody = document.getElementById('documents-table');
@@ -558,7 +911,7 @@ async function uploadFiles() {
             formData.append('files', file);
         }
         
-        const response = await fetch('/api/upload/batch', {
+        const response = await fetch(apiPath('/api/upload/batch'), {
             method: 'POST',
             body: formData
         });
@@ -600,7 +953,7 @@ async function uploadFiles() {
 async function showDetail(id) {
     currentDocumentId = id;
     try {
-        const response = await fetch(`/api/documents/${id}`);
+        const response = await fetch(apiPath(`/api/documents/${id}`));
         const doc = await response.json();
         
         const modal = new bootstrap.Modal(document.getElementById('detailModal'));
@@ -651,7 +1004,7 @@ async function downloadOriginalFile(id) {
     try {
         // ダウンロードリンクを作成
         const a = document.createElement('a');
-        a.href = `/api/documents/${id}/download`;
+        a.href = apiPath(`/api/documents/${id}/download`);
         a.download = ''; // ブラウザにファイル名を自動決定させる
         document.body.appendChild(a);
         a.click();
@@ -673,7 +1026,7 @@ async function exportMarkdown() {
     if (!currentDocumentId) return;
     
     try {
-        const response = await fetch(`/api/export/${currentDocumentId}/markdown`);
+        const response = await fetch(apiPath(`/api/export/${currentDocumentId}/markdown`));
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -690,7 +1043,7 @@ async function batchExport() {
     if (selectedDocuments.size === 0) return;
     
     try {
-        const response = await fetch('/api/export/batch/markdown-zip', {
+        const response = await fetch(apiPath('/api/export/batch/markdown-zip'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -724,7 +1077,7 @@ async function batchDownload() {
     if (selectedDocuments.size === 0) return;
     
     try {
-        const response = await fetch('/api/documents/batch/download', {
+        const response = await fetch(apiPath('/api/documents/batch/download'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -803,7 +1156,7 @@ async function batchSummary() {
             title: title
         });
         
-        const response = await fetch('/api/export/summary', {
+        const response = await fetch(apiPath('/api/export/summary'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -887,7 +1240,7 @@ async function deleteDocument(id) {
     if (!confirm('本当に削除しますか？')) return;
     
     try {
-        await fetch(`/api/documents/${id}`, { method: 'DELETE' });
+        await fetch(apiPath(`/api/documents/${id}`), { method: 'DELETE' });
         alert('削除しました');
         loadStatistics();
         loadDocuments();

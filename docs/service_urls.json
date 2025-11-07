@@ -1,0 +1,121 @@
+[
+  {
+    "project": "nas-dashboard",
+    "service": "nas-dashboard",
+    "host": "192.168.68.110",
+    "port": 9001,
+    "url": "http://192.168.68.110:9001"
+  },
+  {
+    "project": "nas-dashboard-monitoring",
+    "service": "backend",
+    "host": "192.168.68.110",
+    "port": 8002,
+    "url": "http://192.168.68.110:8002"
+  },
+  {
+    "project": "nas-dashboard-monitoring",
+    "service": "frontend",
+    "host": "192.168.68.110",
+    "port": 3002,
+    "url": "http://192.168.68.110:3002"
+  },
+  {
+    "project": "amazon-analytics",
+    "service": "web",
+    "host": "192.168.68.110",
+    "port": 8001,
+    "url": "http://192.168.68.110:8001"
+  },
+  {
+    "project": "youtube-to-notion",
+    "service": "youtube-to-notion",
+    "host": "192.168.68.110",
+    "port": 8111,
+    "url": "http://192.168.68.110:8111"
+  },
+  {
+    "project": "meeting-minutes-byc",
+    "service": "meeting-minutes-byc",
+    "host": "192.168.68.110",
+    "port": 5002,
+    "url": "http://192.168.68.110:5002"
+  },
+  {
+    "project": "document-automation",
+    "service": "web",
+    "host": "192.168.68.110",
+    "port": 8080,
+    "url": "http://192.168.68.110:8080"
+  },
+  {
+    "project": "document-automation",
+    "service": "db",
+    "host": "192.168.68.110",
+    "port": 5433,
+    "url": "http://192.168.68.110:5433"
+  },
+  {
+    "project": "notion-knowledge-summaries",
+    "service": "notion-knowledge-summaries",
+    "host": "192.168.68.110",
+    "port": 5005,
+    "url": "http://192.168.68.110:5005"
+  },
+  {
+    "project": "monitoring",
+    "service": "prometheus",
+    "host": "192.168.68.110",
+    "port": 9090,
+    "url": "http://192.168.68.110:9090"
+  },
+  {
+    "project": "monitoring",
+    "service": "alertmanager",
+    "host": "192.168.68.110",
+    "port": 9093,
+    "url": "http://192.168.68.110:9093"
+  },
+  {
+    "project": "monitoring",
+    "service": "node-exporter",
+    "host": "192.168.68.110",
+    "port": 9100,
+    "url": "http://192.168.68.110:9100"
+  },
+  {
+    "project": "nginx-proxy-manager",
+    "service": "nginx-proxy-manager",
+    "host": "192.168.68.110",
+    "port": 8443,
+    "url": "http://192.168.68.110:8443"
+  },
+  {
+    "project": "nginx-proxy-manager",
+    "service": "nginx-proxy-manager",
+    "host": "192.168.68.110",
+    "port": 8081,
+    "url": "http://192.168.68.110:8081"
+  },
+  {
+    "project": "nginx-proxy-manager",
+    "service": "nginx-proxy-manager",
+    "host": "192.168.68.110",
+    "port": 8181,
+    "url": "http://192.168.68.110:8181"
+  },
+  {
+    "project": "portainer",
+    "service": "portainer",
+    "host": "192.168.68.110",
+    "port": 8000,
+    "url": "http://192.168.68.110:8000"
+  },
+  {
+    "project": "portainer",
+    "service": "portainer",
+    "host": "192.168.68.110",
+    "port": 9000,
+    "url": "http://192.168.68.110:9000"
+  }
+]

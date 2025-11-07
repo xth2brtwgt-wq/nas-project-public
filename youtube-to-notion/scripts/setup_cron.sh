@@ -4,9 +4,9 @@
 
 set -e
 
-SCRIPT_DIR="/home/YOUR_USERNAME/nas-project/youtube-to-notion/scripts"
+SCRIPT_DIR="~/nas-project/youtube-to-notion/scripts"
 CLEANUP_SCRIPT="$SCRIPT_DIR/cleanup_audio.sh"
-CRON_LOG="/home/YOUR_USERNAME/nas-project-data/youtube-to-notion/logs/cron_cleanup.log"
+CRON_LOG="~/nas-project-data/youtube-to-notion/logs/cron_cleanup.log"
 
 # ログ関数
 log() {

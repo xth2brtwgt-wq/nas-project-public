@@ -4,13 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
+    <link rel="icon" href="{{ subfolder_path }}/static/favicon.svg" type="image/svg+xml">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ subfolder_path }}/static/css/style.css">
 </head>
 <body>
     <nav class="navbar navbar-dark bg-primary">
         <div class="container-fluid">
-            <span class="navbar-brand mb-0 h1">📄 ドキュメント自動処理システム</span>
+            <a href="https://yoshi-nas-sys.duckdns.org:8443/" class="navbar-brand mb-0 h1 text-white text-decoration-none" title="ダッシュボードに戻る" style="display: flex; align-items: center;">
+                <i class="fas fa-arrow-left me-2" style="font-size: 1.2em;"></i><span>📄 ドキュメント自動処理システム</span>
+            </a>
             <span class="navbar-text text-white">
                 <small>v<span id="app-version">-</span> <span id="version-name"></span></small>
             </span>
@@ -307,7 +311,124 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/static/js/app.js?v=20241021"></script>
+    <script>
+        // サブフォルダパスをJavaScriptに渡す
+        // subfolder_pathが空の場合は/documentsをデフォルト値として使用（main.pyで設定済み）
+        window.SUBFOLDER_PATH = '{{ subfolder_path }}';
+        
+        // ページロード時の認証チェック（307リダイレクトを検出）
+        // Nginx Proxy Manager経由でリダイレクトされた場合、クエリパラメータが失われる可能性があるため
+        // フロントエンドでリダイレクトを処理する
+        (function() {
+            // ページロード時に即座にAPIリクエストを実行して認証を確認
+            // 認証エラーが返された場合は、ログインページにリダイレクト
+            async function checkAuth() {
+                try {
+                    const subfolderPath = window.SUBFOLDER_PATH || '/documents';
+                    const apiPath = path => path.startsWith('/') ? path : `/${path}`;
+                    const statusPath = `${subfolderPath}${apiPath('/status')}`;
+                    
+                    console.log('[AUTH] 認証チェックを開始:', statusPath);
+                    
+                    const response = await fetch(statusPath, {
+                        credentials: 'include',
+                        redirect: 'manual'
+                    });
+                    
+                    console.log('[AUTH] 認証チェックレスポンス:', response.status, response.statusText);
+                    
+                    // 認証エラー（307/302）が返された場合
+                    if (response.status === 307 || response.status === 302) {
+                        const location = response.headers.get('Location');
+                        console.log('[AUTH] リダイレクト検出:', location);
+                        if (location) {
+                            // /loginが含まれている場合はログインページにリダイレクト
+                            if (location.includes('/login')) {
+                                const loginUrl = location.includes('next=') ? location : `${location}?next=${encodeURIComponent(subfolderPath)}`;
+                                console.log('[AUTH] 認証が必要です。ログインページにリダイレクトします:', loginUrl);
+                                window.location.href = loginUrl;
+                                return;
+                            } else {
+                                // /loginが含まれていない場合（ダッシュボードなど）も、ログインページにリダイレクト
+                                // ただし、別タブで開いた場合はセッションクッキーが共有されていない可能性がある
+                                console.log('[AUTH] リダイレクト先が/loginではありません:', location);
+                                const subfolderPath = window.SUBFOLDER_PATH || '/documents';
+                                const externalUrl = 'https://yoshi-nas-sys.duckdns.org:8443';
+                                const loginUrl = `${externalUrl}/login?next=${encodeURIComponent(subfolderPath)}`;
+                                console.log('[AUTH] ログインページにリダイレクトします:', loginUrl);
+                                window.location.href = loginUrl;
+                                return;
+                            }
+                        }
+                    }
+                    
+                    // ステータスコード0（ネットワークエラーなど）の場合
+                    // HttpOnlyクッキーはJavaScriptから読み取れないため、
+                    // セッションクッキーの有無を確認できない
+                    // そのため、ステータスコード0の場合はすぐにリダイレクトせず、
+                    // 少し待ってから再試行する（ただし、再試行回数に制限を設ける）
+                    if (response.status === 0) {
+                        // 認証チェックの再試行回数を追跡（グローバル変数として定義）
+                        if (typeof window.authCheckRetryCount === 'undefined') {
+                            window.authCheckRetryCount = 0;
+                        }
+                        window.authCheckRetryCount++;
+                        const MAX_AUTH_RETRY_COUNT = 3;
+                        
+                        if (window.authCheckRetryCount <= MAX_AUTH_RETRY_COUNT) {
+                            console.log(`[AUTH] ネットワークエラーが検出されました（ステータスコード0）。${window.authCheckRetryCount}回目の再試行（最大${MAX_AUTH_RETRY_COUNT}回）。1秒後に再試行します。`);
+                            // ステータスコード0の場合は、1秒待ってから再試行
+                            setTimeout(() => {
+                                checkAuth();
+                            }, 1000);
+                            return;
+                        } else {
+                            console.error('[AUTH] ネットワークエラーが継続しています。認証チェックの再試行を中止します。');
+                            window.authCheckRetryCount = 0; // リセット
+                            // 後続のAPIリクエストで認証を確認するため、ここではリダイレクトしない
+                            return;
+                        }
+                    }
+                    
+                    // 成功した場合はリトライカウントをリセット
+                    if (typeof window.authCheckRetryCount !== 'undefined') {
+                        window.authCheckRetryCount = 0;
+                    }
+                    
+                    // 認証成功の場合は、URLからnextパラメータを削除
+                    if (response.ok) {
+                        console.log('[AUTH] 認証成功');
+                        if (window.location.search.includes('next=')) {
+                            if (window.history && window.history.replaceState) {
+                                const url = new URL(window.location.href);
+                                url.searchParams.delete('next');
+                                window.history.replaceState({}, '', url.toString());
+                            }
+                        }
+                    } else {
+                        // その他のエラー（401, 403など）の場合もログインページにリダイレクト
+                        console.log('[AUTH] 認証エラーが検出されました。ログインページにリダイレクトします。');
+                        const subfolderPath = window.SUBFOLDER_PATH || '/documents';
+                        const externalUrl = 'https://yoshi-nas-sys.duckdns.org:8443';
+                        const loginUrl = `${externalUrl}/login?next=${encodeURIComponent(subfolderPath)}`;
+                        window.location.href = loginUrl;
+                        return;
+                    }
+                } catch (error) {
+                    console.error('[AUTH] 認証チェックエラー:', error);
+                    // エラーが発生した場合も、すぐにリダイレクトしない
+                    // 後続のAPIリクエストで認証を確認する
+                    // HttpOnlyクッキーはJavaScriptから読み取れないため、
+                    // セッションクッキーの有無を確認できない
+                    console.log('[AUTH] エラーが発生しましたが、後続のAPIリクエストで認証を確認します。');
+                }
+            }
+            
+            // 即座に認証チェックを実行
+            checkAuth();
+        })();
+    </script>
+    <script src="{{ subfolder_path }}/static/js/app.js?v=20241021"></script>
 </body>
 </html>
 

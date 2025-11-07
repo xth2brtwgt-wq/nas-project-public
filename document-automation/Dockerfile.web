@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     tesseract-ocr-jpn \
     tesseract-ocr-eng \
+    gosu \
     && rm -rf /var/lib/apt/lists/*
 
 # Tesseract環境変数の設定
@@ -29,10 +30,17 @@ COPY utils/ /app/utils/
 # 作業ディレクトリの作成
 RUN mkdir -p /app/uploads /app/processed /app/exports /app/cache
 
-# 非rootユーザーで実行
+# Entrypointスクリプトをコピー
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+# 非rootユーザーを作成（但しentrypointではrootで実行）
 RUN useradd -m -u 1000 appuser && \
     chown -R appuser:appuser /app
-USER appuser
+
+# Entrypointを設定（rootで実行してからappuserに切り替え）
+ENTRYPOINT ["/docker-entrypoint.sh"]
+# USER appuser はentrypointで切り替えるため削除
 
 # ヘルスチェック
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

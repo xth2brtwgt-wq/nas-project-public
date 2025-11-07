@@ -17,7 +17,7 @@ POSTGRES_PASSWORD
 ### 原因
 
 1. **Settings クラスに `POSTGRES_PASSWORD` フィールドが未定義**
-   - `.env` / `.env.local` に `POSTGRES_PASSWORD` が設定されている
+   - `.env` に `POSTGRES_PASSWORD` が設定されている
    - しかし、`Settings` クラスには定義されていない
    - Pydantic v2 ではデフォルトで extra inputs が禁止されている
 
@@ -85,7 +85,7 @@ Pydantic v2 では、デフォルトで extra inputs が禁止されています
 パスワードを変更する場合：
 ```bash
 docker-compose down -v  # 既存のボリュームを削除
-# .env.local を編集
+# .env を編集
 docker-compose up -d     # 新しいパスワードで起動
 ```
 
@@ -99,7 +99,7 @@ WARN: The "GEMINI_API_KEY" variable is not set
 
 **修正方法**:
 1. `version: '3.8'` の行を削除（obsolete）
-2. `.env.local` に `GEMINI_API_KEY` を設定
+2. `.env` に `GEMINI_API_KEY` を設定
 
 ---
 

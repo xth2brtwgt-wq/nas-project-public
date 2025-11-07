@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   youtube-to-notion:
     build: .
@@ -17,12 +15,17 @@ services:
       - CACHE_DIR=/app/data/cache
       - LOG_DIR=/app/logs
       - TZ=Asia/Tokyo
+      - NAS_MODE=true
     volumes:
       # NAS環境でのデータ永続化（統合データディレクトリ使用）
-      - /home/AdminUser/nas-project-data/youtube-to-notion/uploads:/app/data/uploads
-      - /home/AdminUser/nas-project-data/youtube-to-notion/outputs:/app/data/outputs
-      - /home/AdminUser/nas-project-data/youtube-to-notion/cache:/app/data/cache
-      - /home/AdminUser/nas-project-data/youtube-to-notion/logs:/app/logs
+      - ~/nas-project-data/youtube-to-notion/uploads:/app/data/uploads
+      - ~/nas-project-data/youtube-to-notion/outputs:/app/data/outputs
+      - ~/nas-project-data/youtube-to-notion/cache:/app/data/cache
+      - ~/nas-project-data/youtube-to-notion/logs:/app/logs
+      # 認証データベースのマウント（読み取り専用）
+      - ~/nas-project-data:/nas-project-data:ro
+      # nas-dashboardのutilsディレクトリへのアクセス（認証モジュール用）
+      - ~/nas-project/nas-dashboard:/nas-project/nas-dashboard:ro
       # 環境変数ファイル
       - ./.env:/app/.env:ro
     env_file:

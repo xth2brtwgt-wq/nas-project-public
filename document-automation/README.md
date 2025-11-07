@@ -99,10 +99,10 @@ PDF・画像ファイルをアップロードするだけで、OCR処理、AI要
 
 ```bash
 # NASに接続
-ssh YOUR_USERNAME@YOUR_NAS_IP
+ssh -p 23456 YOUR_USERNAME@YOUR_IP_ADDRESS110
 
 # プロジェクトディレクトリに移動
-cd /home/YOUR_USERNAME/nas-project/document-automation
+cd ~/nas-project/document-automation
 ```
 
 #### 2. 環境変数の設定
@@ -150,9 +150,9 @@ sudo docker compose logs -f
 
 #### 5. アクセス
 
-- **Web UI**: http://YOUR_NAS_IP:8080
-- **API ドキュメント**: http://YOUR_NAS_IP:8080/docs
-- **ヘルスチェック**: http://YOUR_NAS_IP:8080/health
+- **Web UI**: http://YOUR_IP_ADDRESS110:8080
+- **API ドキュメント**: http://YOUR_IP_ADDRESS110:8080/docs
+- **ヘルスチェック**: http://YOUR_IP_ADDRESS110:8080/health
 
 ## 🎯 使い方
 
@@ -181,20 +181,20 @@ sudo docker compose logs -f
 #### ファイルアップロード
 
 ```bash
-curl -X POST "http://YOUR_NAS_IP:8080/api/upload" \
+curl -X POST "http://YOUR_IP_ADDRESS110:8080/api/upload" \
   -F "file=@document.pdf"
 ```
 
 #### ドキュメント一覧取得
 
 ```bash
-curl "http://YOUR_NAS_IP:8080/api/documents?status=completed&limit=10"
+curl "http://YOUR_IP_ADDRESS110:8080/api/documents?status=completed&limit=10"
 ```
 
 #### マークダウンエクスポート
 
 ```bash
-curl "http://YOUR_NAS_IP:8080/api/export/1/markdown" \
+curl "http://YOUR_IP_ADDRESS110:8080/api/export/1/markdown" \
   -o document.md
 ```
 
@@ -302,10 +302,10 @@ sudo docker exec -it doc-automation-redis redis-cli
 
 ```bash
 # システム状態確認
-curl http://YOUR_NAS_IP:8080/health
+curl http://YOUR_IP_ADDRESS110:8080/health
 
 # 統計情報確認
-curl http://YOUR_NAS_IP:8080/api/stats
+curl http://YOUR_IP_ADDRESS110:8080/api/stats
 ```
 
 ### ログ確認

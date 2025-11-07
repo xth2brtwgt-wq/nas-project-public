@@ -151,8 +151,8 @@ networks:
 #### ボリューム設定:
 ```yaml
 volumes:
-  - /home/YOUR_USERNAME/nas-project-data/meeting-minutes/uploads:/app/uploads
-  - /home/YOUR_USERNAME/nas-project-data/meeting-minutes/transcripts:/app/transcripts
+  - /home/AdminUser/nas-project-data/meeting-minutes/uploads:/app/uploads
+  - /home/AdminUser/nas-project-data/meeting-minutes/transcripts:/app/transcripts
 ```
 
 #### 対応:

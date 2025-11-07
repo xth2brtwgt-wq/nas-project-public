@@ -50,7 +50,7 @@ cp env.example .env
 
 3. Docker Composeで起動
 ```bash
-docker-compose up -d  # .env.localが自動で優先されます
+docker-compose up -d  # .envを使用します
 ```
 
 4. ブラウザでアクセス
@@ -169,7 +169,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # データベース起動（Docker）
-docker-compose up -d  # .env.localが自動で優先されます db redis
+docker-compose up -d db redis  # .envを使用します
 
 # 開発サーバー起動
 uvicorn app.api.main:app --reload

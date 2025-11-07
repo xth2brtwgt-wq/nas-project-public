@@ -182,7 +182,7 @@ nano .env  # GEMINI_API_KEYを設定
 ./deploy.sh
 
 # 3. アクセス
-# http://YOUR_NAS_IP:8080
+# http://YOUR_IP_ADDRESS110:8080
 ```
 
 ### 2. 基本的なワークフロー

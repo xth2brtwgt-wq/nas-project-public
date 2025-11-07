@@ -27,8 +27,8 @@ for project_info in "${PROJECTS[@]}"; do
     echo -e "${YELLOW}📁 $project_name を更新中...${NC}"
     
     # プロジェクトディレクトリの確認
-    if [ -d "/home/YOUR_USERNAME/nas-project/$project_name" ]; then
-        cd "/home/YOUR_USERNAME/nas-project/$project_name"
+    if [ -d "/home/AdminUser/nas-project/$project_name" ]; then
+        cd "/home/AdminUser/nas-project/$project_name"
         
         # 既存のdeploy-nas.shをバックアップ
         if [ -f "deploy-nas.sh" ]; then
@@ -70,18 +70,18 @@ fi
 
 # 必要なディレクトリを作成
 echo -e "\${YELLOW}📁 必要なディレクトリを作成中...\${NC}"
-mkdir -p /home/YOUR_USERNAME/$project_name-data/uploads
-mkdir -p /home/YOUR_USERNAME/$project_name-data/transcripts
-mkdir -p /home/YOUR_USERNAME/$project_name-data/templates
-mkdir -p /home/YOUR_USERNAME/$project_name-data/logs
+mkdir -p /home/AdminUser/$project_name-data/uploads
+mkdir -p /home/AdminUser/$project_name-data/transcripts
+mkdir -p /home/AdminUser/$project_name-data/templates
+mkdir -p /home/AdminUser/$project_name-data/logs
 
 # 権限設定
 echo -e "\${YELLOW}🔐 ディレクトリ権限を設定中...\${NC}"
-chmod 755 /home/YOUR_USERNAME/$project_name-data
-chmod 755 /home/YOUR_USERNAME/$project_name-data/uploads
-chmod 755 /home/YOUR_USERNAME/$project_name-data/transcripts
-chmod 755 /home/YOUR_USERNAME/$project_name-data/templates
-chmod 755 /home/YOUR_USERNAME/$project_name-data/logs
+chmod 755 /home/AdminUser/$project_name-data
+chmod 755 /home/AdminUser/$project_name-data/uploads
+chmod 755 /home/AdminUser/$project_name-data/transcripts
+chmod 755 /home/AdminUser/$project_name-data/templates
+chmod 755 /home/AdminUser/$project_name-data/logs
 
 # Dockerネットワークを作成（存在しない場合）
 echo -e "\${YELLOW}🌐 Dockerネットワークを作成中...\${NC}"
@@ -111,14 +111,14 @@ if docker ps | grep -q $project_name; then
     echo -e "\${GREEN}✅ $project_nameが正常に起動しました\${NC}"
     echo ""
     echo -e "\${BLUE}📊 アクセス情報:\${NC}"
-    echo "  URL: http://YOUR_NAS_IP:$port"
-    echo "  ヘルスチェック: http://YOUR_NAS_IP:$port/health"
+    echo "  URL: http://192.168.68.110:$port"
+    echo "  ヘルスチェック: http://192.168.68.110:$port/health"
     echo ""
     echo -e "\${BLUE}📁 データディレクトリ:\${NC}"
-    echo "  アップロード: /home/YOUR_USERNAME/$project_name-data/uploads"
-    echo "  議事録: /home/YOUR_USERNAME/$project_name-data/transcripts"
-    echo "  テンプレート: /home/YOUR_USERNAME/$project_name-data/templates"
-    echo "  ログ: /home/YOUR_USERNAME/$project_name-data/logs"
+    echo "  アップロード: /home/AdminUser/$project_name-data/uploads"
+    echo "  議事録: /home/AdminUser/$project_name-data/transcripts"
+    echo "  テンプレート: /home/AdminUser/$project_name-data/templates"
+    echo "  ログ: /home/AdminUser/$project_name-data/logs"
     echo ""
     echo -e "\${BLUE}🔧 管理コマンド:\${NC}"
     echo "  ログ確認: docker logs -f $project_name"
@@ -167,5 +167,5 @@ echo ""
 echo -e "${BLUE}📁 データディレクトリ:${NC}"
 for project_info in "${PROJECTS[@]}"; do
     IFS=':' read -r project_name port <<< "$project_info"
-    echo "  /home/YOUR_USERNAME/$project_name-data/"
+    echo "  /home/AdminUser/$project_name-data/"
 done

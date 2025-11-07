@@ -30,18 +30,18 @@ fi
 
 # 必要なディレクトリを作成
 echo -e "${YELLOW}📁 必要なディレクトリを作成中...${NC}"
-mkdir -p /home/YOUR_USERNAME/PROJECT_NAME-data/uploads
-mkdir -p /home/YOUR_USERNAME/PROJECT_NAME-data/transcripts
-mkdir -p /home/YOUR_USERNAME/PROJECT_NAME-data/templates
-mkdir -p /home/YOUR_USERNAME/PROJECT_NAME-data/logs
+mkdir -p /home/AdminUser/PROJECT_NAME-data/uploads
+mkdir -p /home/AdminUser/PROJECT_NAME-data/transcripts
+mkdir -p /home/AdminUser/PROJECT_NAME-data/templates
+mkdir -p /home/AdminUser/PROJECT_NAME-data/logs
 
 # 権限設定
 echo -e "${YELLOW}🔐 ディレクトリ権限を設定中...${NC}"
-chmod 755 /home/YOUR_USERNAME/PROJECT_NAME-data
-chmod 755 /home/YOUR_USERNAME/PROJECT_NAME-data/uploads
-chmod 755 /home/YOUR_USERNAME/PROJECT_NAME-data/transcripts
-chmod 755 /home/YOUR_USERNAME/PROJECT_NAME-data/templates
-chmod 755 /home/YOUR_USERNAME/PROJECT_NAME-data/logs
+chmod 755 /home/AdminUser/PROJECT_NAME-data
+chmod 755 /home/AdminUser/PROJECT_NAME-data/uploads
+chmod 755 /home/AdminUser/PROJECT_NAME-data/transcripts
+chmod 755 /home/AdminUser/PROJECT_NAME-data/templates
+chmod 755 /home/AdminUser/PROJECT_NAME-data/logs
 
 # Dockerネットワークを作成（存在しない場合）
 echo -e "${YELLOW}🌐 Dockerネットワークを作成中...${NC}"
@@ -71,14 +71,14 @@ if docker ps | grep -q PROJECT_NAME; then
     echo -e "${GREEN}✅ PROJECT_NAMEが正常に起動しました${NC}"
     echo ""
     echo -e "${BLUE}📊 アクセス情報:${NC}"
-    echo "  URL: http://YOUR_NAS_IP:PORT"
-    echo "  ヘルスチェック: http://YOUR_NAS_IP:PORT/health"
+    echo "  URL: http://192.168.68.110:PORT"
+    echo "  ヘルスチェック: http://192.168.68.110:PORT/health"
     echo ""
     echo -e "${BLUE}📁 データディレクトリ:${NC}"
-    echo "  アップロード: /home/YOUR_USERNAME/PROJECT_NAME-data/uploads"
-    echo "  議事録: /home/YOUR_USERNAME/PROJECT_NAME-data/transcripts"
-    echo "  テンプレート: /home/YOUR_USERNAME/PROJECT_NAME-data/templates"
-    echo "  ログ: /home/YOUR_USERNAME/PROJECT_NAME-data/logs"
+    echo "  アップロード: /home/AdminUser/PROJECT_NAME-data/uploads"
+    echo "  議事録: /home/AdminUser/PROJECT_NAME-data/transcripts"
+    echo "  テンプレート: /home/AdminUser/PROJECT_NAME-data/templates"
+    echo "  ログ: /home/AdminUser/PROJECT_NAME-data/logs"
     echo ""
     echo -e "${BLUE}🔧 管理コマンド:${NC}"
     echo "  ログ確認: docker logs -f PROJECT_NAME"
@@ -94,7 +94,7 @@ if docker ps | grep -q PROJECT_NAME; then
     echo -e "${GREEN}🎉 デプロイが完了しました！${NC}"
     echo ""
     echo -e "${YELLOW}📝 次のステップ:${NC}"
-    echo "1. ブラウザで http://YOUR_NAS_IP:PORT にアクセス"
+    echo "1. ブラウザで http://192.168.68.110:PORT にアクセス"
     echo "2. アプリケーション機能をテスト"
     echo "3. ログを確認してエラーがないかチェック"
     echo "4. 必要に応じて設定を調整"

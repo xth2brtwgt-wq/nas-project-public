@@ -20,10 +20,15 @@ services:
       - AI_PROVIDER=${AI_PROVIDER:-gemini}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - NAS_MODE=true
     volumes:
-      - /home/AdminUser/nas-project-data/amazon-analytics:/app/data
+      - ~/nas-project-data/amazon-analytics:/app/data
       - ./app:/app/app
       - ./config:/app/config
+      # 認証データベースのマウント（読み取り専用）
+      - ~/nas-project-data:/nas-project-data:ro
+      # nas-dashboardのutilsディレクトリへのアクセス（認証モジュール用）
+      - ~/nas-project/nas-dashboard:/nas-project/nas-dashboard:ro
     depends_on:
       - db
       - redis

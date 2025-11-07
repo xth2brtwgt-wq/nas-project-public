@@ -3,7 +3,7 @@
 """
 
 # バージョン情報
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 VERSION_NAME = "初期リリース版"
 RELEASE_DATE = "2025-10-19"
 
@@ -21,6 +21,13 @@ FEATURES = [
 
 # バージョン履歴
 VERSION_HISTORY = [
+    {
+        "version": "1.1.0",
+        "date": "2025-11-07",
+        "changes": [
+            "feat: document-automationのdocker-entrypoint.shを追加"
+        ]
+    },
     {
         "version": "1.0.0",
         "date": "2025-10-19",

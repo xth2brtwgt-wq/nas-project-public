@@ -7,10 +7,11 @@
 - **管理**: Gitリポジトリにコミット
 - **内容**: 実際のAPIキー・パスワード
 
-### 2. `.env.local` （Gitで管理しない）
+### 2. `.env.restore` （Gitで管理しない）
 - **用途**: GitPull時などで.envファイルが初期化された時用のバックアップ
 - **管理**: `.gitignore`で除外
 - **内容**: バックアップ用の設定値
+- **注意**: 実行時には使用されません（`.env`のみを使用）
 
 ### 3. `env.example` （Gitで管理）
 - **用途**: 設定テンプレート・ドキュメント
@@ -21,7 +22,7 @@
 
 ## 🎯 設計思想
 
-### なぜ`.env.local`を使うのか？
+### なぜ`.env.restore`を使うのか？
 
 #### 問題
 ```bash
@@ -34,11 +35,11 @@ git pull  # 最新コードを取得
 
 #### 解決策
 ```bash
-# .env + .env.local の場合
+# .env + .env.restore の場合
 git pull  # 最新コードを取得
-# → .envは更新される（テンプレート）
-# → .env.localは残る（実際の設定）
-# → 設定は保持される 😊
+# → .envが初期化された場合
+# → .env.restoreから復元（バックアップ）
+# → 設定を復元可能 😊
 ```
 
 ---
@@ -53,7 +54,7 @@ env_file:
 
 ### 動作
 1. `.env`が存在 → その値を使用（実際の稼働設定）
-2. `.env.local`は初期化時のバックアップ用
+2. `.env.restore`は初期化時のバックアップ用（実行時には使用しない）
 
 ---
 
@@ -65,14 +66,17 @@ env_file:
 git clone <repository>
 cd amazon-analytics
 
-# 2. .envを編集（実際の値を設定）
+# 2. env.exampleから.envを作成
+cp env.example .env
+
+# 3. .envを編集（実際の値を設定）
 nano .env
 # APIキー、パスワードなどを設定
 
-# 3. .env.localをバックアップとして作成
-cp .env .env.local
+# 4. .envから.env.restoreを作成（バックアップ）
+cp .env .env.restore
 
-# 4. 起動
+# 5. 起動
 docker-compose up -d
 ```
 
@@ -81,8 +85,16 @@ docker-compose up -d
 # コードを更新
 git pull
 
-# .envが初期化された場合は.env.localから復元
-cp .env.local .env
+# .envが初期化された場合は.env.restoreから復元
+if [ ! -f .env ] || [ ! -s .env ]; then
+    if [ -f .env.restore ]; then
+        echo "⚠️  .envが初期化されています。.env.restoreから復元します..."
+        cp .env.restore .env
+    else
+        echo "⚠️  警告: .env.restoreが見つかりません。env.exampleから作成してください"
+        cp env.example .env
+    fi
+fi
 
 docker-compose restart
 ```
@@ -92,8 +104,8 @@ docker-compose restart
 # .envはGitで共有される（実際の設定）
 git push
 
-# .env.localはバックアップ用として各自が作成
-# → チームメンバーに「.env.localをバックアップとして作成してください」と指示
+# .env.restoreはバックアップ用として各自が作成
+# → チームメンバーに「.env.restoreをバックアップとして作成してください」と指示
 ```
 
 ---
@@ -103,7 +115,7 @@ git push
 ### .gitignoreの設定
 ```gitignore
 # 機密情報を含むファイルを除外
-.env.local
+.env.restore
 .env.production
 .env.*.local
 .env.backup*
@@ -114,8 +126,8 @@ git push
 ```
 
 ### 安全性
-- ✅ `.env.local` → バックアップ用設定 → Git管理外
-- ✅ `.env` → 実際のAPIキー・パスワード → Git管理可
+- ✅ `.env.restore` → バックアップ用設定 → Git管理外（実行時には使用しない）
+- ✅ `.env` → 実際のAPIキー・パスワード → Git管理可（実際の稼働設定）
 - ✅ `env.example` → 説明付きテンプレート → Git管理可
 
 ---
@@ -125,27 +137,30 @@ git push
 ### `.env` （Gitで管理）
 ```env
 # データベース設定（実際の値）
-POSTGRES_PASSWORD=your_secure_password_here
-DATABASE_URL=postgresql://postgres:your_secure_password_here@db:5432/amazon_analytics
+POSTGRES_PASSWORD=amazon_analytics_2025
+DATABASE_URL=postgresql://postgres:amazon_analytics_2025@db:5432/amazon_analytics
 
 # Gemini API（実際のキー）
-GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_API_KEY=AIzaSyDS_gER_ei9mfkNoGG63P2VODorlayD9dM
 ```
 
-### `.env.local` （Git管理外）
+### `.env.restore` （Git管理外）
 ```env
 # データベース設定（バックアップ値）
-POSTGRES_PASSWORD=your_secure_password_here
-DATABASE_URL=postgresql://postgres:your_secure_password_here@db:5432/amazon_analytics
+POSTGRES_PASSWORD=amazon_analytics_2025
+DATABASE_URL=postgresql://postgres:amazon_analytics_2025@db:5432/amazon_analytics
 
 # Gemini API（バックアップキー）
-GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_API_KEY=AIzaSyDS_gER_ei9mfkNoGG63P2VODorlayD9dM
 ```
+
+⚠️ **注意**: `.env.restore`は実行時には使用されません。`.env`が初期化された際の復元用バックアップファイルです。
 
 ### `env.example` （Gitで管理）
 ```env
 # Amazon Purchase Analytics System - 環境変数設定例
-# このファイルをコピーして .env.local を作成してください
+# このファイルをコピーして .env を作成してください
+# .env.restoreはバックアップ用として保存しておくファイルです（実行時には使用しない）
 
 # データベース設定
 POSTGRES_PASSWORD=your_secure_password_here
@@ -179,24 +194,24 @@ git commit -m "Add sample values"  # ← 稼働時に使えない！
 # .envに実際のAPIキーを書く
 nano .env
 
-# .env.localはバックアップとして作成
-cp .env .env.local
+# .env.restoreはバックアップとして作成
+cp .env .env.restore
 git add .env  # ← 実際の値なので稼働可能
 ```
 
 ---
 
-### ❌ 間違い2: .env.localをGitにコミット
+### ❌ 間違い2: .env.restoreをGitにコミット
 ```bash
-git add .env.local  # ← バックアップファイルなので不要！
+git add .env.restore  # ← バックアップファイルなので不要！
 git commit -m "Add backup config"
 ```
 
-### ✅ 正解: .env.localは.gitignoreで除外
+### ✅ 正解: .env.restoreは.gitignoreで除外
 ```bash
 # .gitignoreに含まれているので自動的に除外される
 git status
-# → .env.localは表示されない
+# → .env.restoreは表示されない
 ```
 
 ---
@@ -205,13 +220,13 @@ git status
 
 ### nas-projectの全プロジェクト
 ```
-document-automation/   → .env + .env.local 方式
-insta360-auto-sync/    → .env + .env.local 方式
-meeting-minutes-byc/   → .env + .env.local 方式
-amazon-analytics/      → .env + .env.local 方式 ✅
+document-automation/   → .env + .env.restore 方式
+insta360-auto-sync/    → .env + .env.restore 方式
+meeting-minutes-byc/   → .env + .env.restore 方式
+amazon-analytics/      → .env + .env.restore 方式 ✅
 ```
 
-すべて同じ設計思想を採用。
+すべて同じ設計思想を採用（`.env`のみを使用、`.env.restore`はバックアップ用）。
 
 ---
 
@@ -222,8 +237,8 @@ amazon-analytics/      → .env + .env.local 方式 ✅
 - 複数指定時は最初のファイルが優先される
 
 ### ベストプラクティス
-- `.env` - 実際の稼働設定（Git管理）
-- `.env.local` - バックアップ設定（Git管理外）
+- `.env` - 実際の稼働設定（Git管理、実行時に使用）
+- `.env.restore` - バックアップ設定（Git管理外、実行時には使用しない）
 - `.env.production` - 本番設定（Git管理外）
 - `env.example` - テンプレート（Git管理）
 
@@ -233,15 +248,15 @@ amazon-analytics/      → .env + .env.local 方式 ✅
 
 プロジェクトセットアップ時：
 - [ ] `.env`が存在する（実際の稼働設定）
-- [ ] `.env.local`をバックアップとして作成した
+- [ ] `.env.restore`をバックアップとして作成した
 - [ ] `.env`に実際の機密情報を設定した
-- [ ] `.gitignore`に`.env.local`が含まれている
-- [ ] `docker-compose.yml`で`.env`のみを読み込んでいる
+- [ ] `.gitignore`に`.env.restore`が含まれている
+- [ ] `docker-compose.yml`で`.env`のみを読み込んでいる（`.env.restore`は使用しない）
 
 Git操作時：
 - [ ] `.env`のみコミット（実際の稼働設定）
-- [ ] `.env.local`はコミットしない（バックアップファイル）
-- [ ] `git pull`後も`.env.local`が残っている
+- [ ] `.env.restore`はコミットしない（バックアップファイル）
+- [ ] `git pull`後も`.env.restore`が残っている
 
 ---
 

@@ -5,17 +5,97 @@
 NAS環境でのDockerアプリケーションデプロイの共通仕様です。
 全プロジェクトで統一されたデプロイ方法を提供します。
 
-## 📁 ファイル構成
+## 📁 ディレクトリ構成
 
 ```
 docs/deployment/
-├── README.md                           # このファイル
-├── NAS_DEPLOYMENT_SPECIFICATION.md    # 詳細仕様書
-├── deploy-nas-template.sh             # deploy-nas.shテンプレート
-├── docker-compose-template.yml         # docker-compose.ymlテンプレート
-├── setup-nas-project.sh               # 新規プロジェクト作成スクリプト
-└── update-existing-projects.sh         # 既存プロジェクト更新スクリプト
+├── README.md                    # このファイル（インデックス）
+├── guides/                      # ガイド・手順書
+│   ├── setup/                   # セットアップガイド
+│   ├── configuration/           # 設定ガイド
+│   └── troubleshooting/         # トラブルシューティング
+├── reports/                     # 完了報告・サマリー
+│   ├── completed/               # 完了済みタスク
+│   └── summaries/               # サマリードキュメント
+├── archive/                     # アーカイブ（古いトラブルシューティング記録）
+│   ├── auth/                    # 認証関連の古い記録
+│   ├── nginx/                   # Nginx関連の古い記録
+│   ├── deployment/              # デプロイメント関連の古い記録
+│   ├── security/                # セキュリティ関連の古い記録
+│   └── external-access/         # 外部アクセス関連の古い記録
+└── templates/                  # テンプレート
+    ├── deploy-nas-template.sh
+    └── docker-compose-template.yml
 ```
+
+## 🚀 主要なガイド
+
+### セットアップガイド (`guides/setup/`)
+
+- **NAS_DEPLOYMENT_SPECIFICATION.md** - NAS環境デプロイ仕様書
+- **NAS_DEPLOYMENT_GUIDE.md** - NAS環境デプロイガイド
+- **NAS_DEPLOYMENT_STEPS.md** - NASデプロイメント手順
+- **HTTPS_SETUP_GUIDE.md** - HTTPS設定ガイド
+- **DUCKDNS_SETUP_GUIDE.md** - DuckDNS設定ガイド
+- **CERTBOT_DNS_CHALLENGE_GUIDE.md** - Certbot DNSチャレンジガイド
+- **CERTIFICATE_AUTO_RENEWAL_SETUP.md** - 証明書自動更新設定
+- **FAIL2BAN_INSTALL_SETUP.md** - Fail2Banインストール設定
+- **UFW_INSTALL_SETUP.md** - UFWインストール設定
+
+### 設定ガイド (`guides/configuration/`)
+
+- **NGINX_FINAL_CONFIG.md** - Nginx最終設定
+- **NGINX_SECURITY_HEADERS_COMPLETE.md** - Nginxセキュリティヘッダー設定
+- **NGINX_PROXY_MANAGER_SETUP_COMPLETE.md** - Nginx Proxy Manager設定完了
+- **NGINX_PROXY_MANAGER_SETUP_STEP_BY_STEP.md** - Nginx Proxy Manager設定手順
+- **SECURITY_SETTINGS_COMPLETE.md** - セキュリティ設定完了
+- **SECURITY_CHECKLIST.md** - セキュリティチェックリスト
+
+### トラブルシューティング (`guides/troubleshooting/`)
+
+- **CERTBOT_TROUBLESHOOTING.md** - Certbotトラブルシューティング
+- **CERTIFICATE_AUTO_RENEWAL.md** - 証明書自動更新
+- **CERTIFICATE_AUTO_RENEWAL_SUMMARY.md** - 証明書自動更新サマリー
+- **CRON_FIX.md** - Cron修正
+- **CRON_TROUBLESHOOTING.md** - Cronトラブルシューティング
+- **DEPLOYMENT_TROUBLESHOOTING.md** - デプロイメントトラブルシューティング
+- **FIX_PERMISSION_ERROR.md** - 権限エラー修正
+- **FIX_REMAINING_ISSUES.md** - 残りの問題修正
+
+## 📊 完了報告・サマリー
+
+### 完了済みタスク (`reports/completed/`)
+
+- **ALL_PROJECTS_DATA_EXTERNAL_FIX.md** - 全プロジェクトのデータ外部化修正
+- **DISK_USAGE_FIX.md** - ディスク使用量修正
+- **FINAL_CLEANUP_STEPS.md** - 最終クリーンアップ手順
+- **FINAL_STATUS_AND_CLEANUP.md** - 最終ステータスとクリーンアップ
+- **PROJECT_CLEANUP_ITEMS.md** - プロジェクトクリーンアップ項目
+- **DATA_EXTERNAL_CONFIRMATION.md** - データ外部化確認
+- **LOG_OUTPUT_FIX_CONFIRMATION.md** - ログ出力先修正確認
+- **LOG_MONITORING_PATH_CONFIRMATION.md** - ログ監視パス確認
+- **ENVIRONMENT_SYNC_STATUS.md** - 環境同期ステータス
+
+### サマリードキュメント (`reports/summaries/`)
+
+- **DEPLOYMENT_SUCCESS_REPORT.md** - デプロイ成功報告
+- **DEPLOYMENT_COMPLETE_SUMMARY.md** - デプロイ完了サマリー
+- **ALL_SERVICES_AUTH_INTEGRATION_SUMMARY.md** - 全サービス認証統合サマリー
+- **ALL_SERVICES_SUBFOLDER_COMPLETE.md** - 全サービスサブフォルダ対応完了
+- **ALL_SERVICES_EXTERNAL_ACCESS_SETUP.md** - 全サービス外部アクセス設定
+- **CURRENT_STATUS_SUMMARY.md** - 現在のステータスサマリー
+- **CURRENT_ACCESS_STATUS.md** - 現在のアクセスステータス
+- **DASHBOARD_EXTERNAL_ACCESS_SUMMARY.md** - ダッシュボード外部アクセスサマリー
+
+## 🔍 アーカイブ
+
+古いトラブルシューティング記録や完了済みの問題の詳細記録は`archive/`ディレクトリに保存されています。
+
+- **archive/auth/** - 認証関連の古い記録（約60個）
+- **archive/nginx/** - Nginx関連の古い記録（約40個）
+- **archive/deployment/** - デプロイメント関連の古い記録（約30個）
+- **archive/security/** - セキュリティ関連の古い記録（約20個）
+- **archive/external-access/** - 外部アクセス関連の古い記録（約10個）
 
 ## 🚀 使用方法
 
@@ -36,167 +116,77 @@ docs/deployment/
 ./docs/deployment/update-existing-projects.sh
 ```
 
-### 3. 手動でのテンプレート適用
-
-#### deploy-nas.shの作成
+### 3. 日常的なデプロイ
 
 ```bash
-# プロジェクトディレクトリに移動
-cd /home/YOUR_USERNAME/nas-project/your-project/
-
-# テンプレートをコピー
-cp ../../docs/deployment/deploy-nas-template.sh deploy-nas.sh
-
-# プロジェクト名とポート番号を置換
-sed -i 's/PROJECT_NAME/your-project/g' deploy-nas.sh
-sed -i 's/PORT/5007/g' deploy-nas.sh
-
-# 実行権限を付与
-chmod +x deploy-nas.sh
-```
-
-#### docker-compose.ymlの作成
-
-```bash
-# テンプレートをコピー
-cp ../../docs/deployment/docker-compose-template.yml docker-compose.yml
-
-# プロジェクト名とポート番号を置換
-sed -i 's/PROJECT_NAME/your-project/g' docker-compose.yml
-sed -i 's/EXTERNAL_PORT/5007/g' docker-compose.yml
+# NAS環境で実行
+cd ~/nas-project/project-name
+git pull origin main
+docker compose up -d --build
 ```
 
 ## 📋 標準的なディレクトリ構造
 
 ```
-/home/YOUR_USERNAME/
-├── nas-project/                    # Gitリポジトリのルート
+/home/AdminUser/
+├── nas-project/                    # Gitリポジトリのルート（ソースコードのみ）
 │   ├── project-name/              # プロジェクトディレクトリ
 │   │   ├── app.py                 # メインアプリケーション
 │   │   ├── docker-compose.yml    # Docker設定
 │   │   ├── deploy-nas.sh         # デプロイスクリプト
-│   │   ├── env.production        # 本番環境変数
-│   │   └── utils/                # ユーティリティ
+│   │   ├── .env                   # 実際の稼働設定（Git管理）
+│   │   ├── .env.restore           # バックアップ（Git管理外）
+│   │   └── env.example            # 環境変数テンプレート
 │   └── other-project/
-└── project-name-data/            # データディレクトリ（ボリュームマウント用）
-    ├── uploads/
-    ├── transcripts/
-    ├── templates/
-    └── logs/
-```
-
-## 🔧 デプロイ手順
-
-### 初回デプロイ
-
-1. **プロジェクトディレクトリに移動**
-   ```bash
-   cd /home/YOUR_USERNAME/nas-project/project-name/
-   ```
-
-2. **環境変数ファイルの設定**
-   ```bash
-   cp env.example env.production
-   # env.productionを編集してAPIキーなどを設定
-   ```
-
-3. **デプロイスクリプトの実行**
-   ```bash
-   ./deploy-nas.sh
-   ```
-
-### 日常的なデプロイ
-
-1. **最新コードの取得**
-   ```bash
-   git pull origin main
-   ```
-
-2. **デプロイの実行**
-   ```bash
-   ./deploy-nas.sh
-   ```
-
-### 緊急時の再起動
-
-```bash
-docker compose restart
+└── nas-project-data/              # 統合データディレクトリ（全データを一元管理）
+    └── project-name/
+        ├── logs/
+        ├── data/
+        ├── uploads/
+        └── cache/
 ```
 
 ## 📊 プロジェクト一覧
 
 | プロジェクト名 | ポート | データディレクトリ | 状態 |
 |---------------|--------|-------------------|------|
-| meeting-minutes-byc | 5002 | /home/YOUR_USERNAME/meeting-minutes-data/ | ✅ 稼働中 |
-| amazon-analytics | 5001 | /home/YOUR_USERNAME/amazon-analytics-data/ | 🔄 更新予定 |
-| document-automation | 5003 | /home/YOUR_USERNAME/document-automation-data/ | 🔄 更新予定 |
-| insta360-auto-sync | 5004 | /home/YOUR_USERNAME/insta360-auto-sync-data/ | 🔄 更新予定 |
-| nas-dashboard | 5005 | /home/YOUR_USERNAME/nas-dashboard-data/ | 🔄 更新予定 |
+| meeting-minutes-byc | 5002 | /home/AdminUser/nas-project-data/meeting-minutes-byc/ | ✅ 稼働中 |
+| amazon-analytics | 5001 | /home/AdminUser/nas-project-data/amazon-analytics/ | ✅ 稼働中 |
+| document-automation | 5003 | /home/AdminUser/nas-project-data/document-automation/ | ✅ 稼働中 |
+| youtube-to-notion | 8111 | /home/AdminUser/nas-project-data/youtube-to-notion/ | ✅ 稼働中 |
+| nas-dashboard | 9001 | /home/AdminUser/nas-project-data/nas-dashboard/ | ✅ 稼働中 |
+| nas-dashboard-monitoring | 8002 | /home/AdminUser/nas-project-data/nas-dashboard-monitoring/ | ✅ 稼働中 |
 
-## 🔍 トラブルシューティング
+## 🔧 クイックリファレンス
 
-### よくある問題
-
-1. **環境変数ファイルの初期化**
-   - 症状: APIキーが無効
-   - 解決: `.env.local`から`.env`にコピー
-
-2. **ディレクトリ構造の混乱**
-   - 症状: 間違ったディレクトリでデプロイ
-   - 解決: 正しいディレクトリ（`/home/YOUR_USERNAME/nas-project/project-name/`）で実行
-
-3. **ボリュームマウントの問題**
-   - 症状: 古いファイルが残る
-   - 解決: データディレクトリの更新
-
-### 確認コマンド
+### よく使うコマンド
 
 ```bash
 # コンテナの状態確認
-docker ps | grep project-name
+docker ps
 
 # ログの確認
-docker logs project-name
+docker logs <container-name>
 
-# 環境変数の確認
-docker exec project-name env | grep API_KEY
+# コンテナの再起動
+docker compose restart
 
-# ファイルの確認
-ls -la /home/YOUR_USERNAME/project-name-data/
+# コンテナの再ビルド
+docker compose up -d --build
 ```
 
-## 📋 チェックリスト
+### トラブルシューティング
 
-### デプロイ前
+問題が発生した場合は、`guides/troubleshooting/`ディレクトリを参照してください。
 
-- [ ] 正しいディレクトリにいる
-- [ ] `env.production`が設定されている
-- [ ] 必要なAPIキーが設定されている
-- [ ] ポートが使用されていない
+## 📚 関連ドキュメント
 
-### デプロイ後
-
-- [ ] コンテナが正常に起動している
-- [ ] ヘルスチェックが通る
-- [ ] ログにエラーがない
-- [ ] アプリケーションにアクセスできる
-
-## 🎯 推奨事項
-
-1. **定期的なバックアップ**
-   - データディレクトリのバックアップ
-   - 環境変数ファイルのバックアップ
-
-2. **監視の設定**
-   - ログの監視
-   - リソース使用量の監視
-
-3. **セキュリティ**
-   - APIキーの適切な管理
-   - 定期的なパスワード変更
+- [データ管理ルール](../../DATA_MANAGEMENT_RULES.md)
+- [デプロイメントルール](../../DEPLOYMENT_RULES.md)
+- [バージョン管理](../../VERSION_MANAGEMENT.md)
 
 ---
 
-**作成日**: 2025年10月23日
+**作成日**: 2025年10月23日  
+**最終更新**: 2025年11月7日  
 **対象**: 全NAS環境プロジェクト
-**更新**: 必要に応じて更新

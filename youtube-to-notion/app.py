@@ -6,25 +6,63 @@ YouTube動画の要約・Notion自動投稿アプリケーション
 """
 
 import os
+import sys
 import json
 import logging
 import threading
 import uuid
 from queue import Queue
 from datetime import datetime
+from pathlib import Path
+from functools import wraps
+import importlib.util
 
-from flask import Flask, request, jsonify, render_template, send_from_directory
+from flask import Flask, request, jsonify, render_template, send_from_directory, redirect
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit, join_room
 from dotenv import load_dotenv
 import google.generativeai as genai
 
-# カスタムユーティリティのインポート
+# ロガーの初期化（認証モジュールのインポート前に必要）
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler()]
+)
+logger = logging.getLogger(__name__)
+
+# カスタムユーティリティのインポート（認証モジュールより前にインポート）
 from utils.youtube_downloader import YouTubeDownloader
 from utils.notion_client import NotionClient
 from utils.markdown_generator import MarkdownGenerator
 from utils.video_info_service import VideoInfoService
 from utils.summarization_service import SummarizationService
+
+# 共通認証モジュールのインポート（カスタムユーティリティのインポート後）
+nas_dashboard_path = Path('/nas-project/nas-dashboard')
+if nas_dashboard_path.exists():
+    # カスタムユーティリティの後に追加することで、パス競合を回避
+    sys.path.insert(0, str(nas_dashboard_path))
+    try:
+        # 明示的にパスを指定してインポート
+        auth_common_path = nas_dashboard_path / 'utils' / 'auth_common.py'
+        if auth_common_path.exists():
+            spec = importlib.util.spec_from_file_location("auth_common", str(auth_common_path))
+            auth_common = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(auth_common)
+            get_current_user_from_request = auth_common.get_current_user_from_request
+            get_dashboard_login_url = auth_common.get_dashboard_login_url
+            AUTH_ENABLED = True
+            logger.info("認証モジュールを読み込みました")
+        else:
+            logger.warning(f"認証モジュールファイルが見つかりません: {auth_common_path}")
+            AUTH_ENABLED = False
+    except Exception as e:
+        logger.warning(f"認証モジュールをインポートできませんでした（認証機能は無効化されます）: {e}")
+        AUTH_ENABLED = False
+else:
+    logger.warning("認証モジュールのパスが見つかりません（認証機能は無効化されます）")
+    AUTH_ENABLED = False
 
 # 環境変数の読み込み
 load_dotenv()
@@ -32,14 +70,52 @@ load_dotenv()
 # アプリケーション情報
 from config.version import APP_NAME, APP_VERSION
 
+# サブフォルダ対応（Nginx Proxy Manager経由で /youtube でアクセスされる場合）
+# 環境変数で制御可能（外部アクセス時のみ有効化）
+SUBFOLDER_PATH = os.getenv('SUBFOLDER_PATH', '')
+
 # Flask アプリケーションの初期化
-app = Flask(__name__)
+# static_url_pathは通常の/staticのまま（物理パスはstatic/フォルダ）
+# APPLICATION_ROOTを設定することで、url_forが自動的に/youtubeを付ける
+app = Flask(__name__, static_url_path='/static')
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
+
+# APPLICATION_ROOTとSESSION_COOKIE_PATHを設定
+# APPLICATION_ROOTを設定すると、url_forが自動的に/youtubeを付ける
+# ただし、static_url_pathは/staticのままなので、url_for('static', ...)は/static/...を生成
+# そのため、テンプレート側で手動で/youtubeを追加する必要がある
+if SUBFOLDER_PATH and SUBFOLDER_PATH != '/':
+    app.config['APPLICATION_ROOT'] = SUBFOLDER_PATH
+    app.config['SESSION_COOKIE_PATH'] = SUBFOLDER_PATH
+
 CORS(app)
+
+# 認証デコレータ
+def require_auth(f):
+    """認証が必要なエンドポイントのデコレータ"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not AUTH_ENABLED:
+            # 認証が無効な場合はそのまま通す
+            return f(*args, **kwargs)
+        
+        user = get_current_user_from_request(request)
+        if not user:
+            # ログインページにリダイレクト
+            login_url = get_dashboard_login_url(request)
+            logger.info(f"[AUTH] 認証が必要です: {request.path} -> {login_url}")
+            return redirect(login_url)
+        return f(*args, **kwargs)
+    return decorated_function
+
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading', logger=False, engineio_logger=False, allow_unsafe_werkzeug=True)
 
 # ログ設定
-log_dir = os.getenv('LOG_DIR', './logs')
+# NAS環境では統合データディレクトリを使用、ローカル環境では./logsを使用
+if os.getenv('NAS_MODE'):
+    log_dir = os.getenv('LOG_DIR', '/app/logs')
+else:
+    log_dir = os.getenv('LOG_DIR', './logs')
 os.makedirs(log_dir, exist_ok=True)
 
 # ファイルハンドラーを追加
@@ -58,12 +134,27 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# サブフォルダパスのログ出力（起動時）
+logger.info(f"[INIT] SUBFOLDER_PATH from env: {SUBFOLDER_PATH}")
+if SUBFOLDER_PATH and SUBFOLDER_PATH != '/':
+    logger.info(f"[INIT] APPLICATION_ROOT set to: {SUBFOLDER_PATH}")
+    logger.info(f"[INIT] SESSION_COOKIE_PATH set to: {SUBFOLDER_PATH}")
+else:
+    logger.info("[INIT] SUBFOLDER_PATH not set, using root path")
+
 # 設定
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
-UPLOAD_FOLDER = os.getenv('UPLOAD_DIR', './data/uploads')
-OUTPUT_FOLDER = os.getenv('OUTPUT_DIR', './data/outputs')
-CACHE_FOLDER = os.getenv('CACHE_DIR', './data/cache')
-LOG_FOLDER = os.getenv('LOG_DIR', './logs')
+# NAS環境では統合データディレクトリを使用、ローカル環境では相対パスを使用
+if os.getenv('NAS_MODE'):
+    UPLOAD_FOLDER = os.getenv('UPLOAD_DIR', '/app/data/uploads')
+    OUTPUT_FOLDER = os.getenv('OUTPUT_DIR', '/app/data/outputs')
+    CACHE_FOLDER = os.getenv('CACHE_DIR', '/app/data/cache')
+    LOG_FOLDER = os.getenv('LOG_DIR', '/app/logs')
+else:
+    UPLOAD_FOLDER = os.getenv('UPLOAD_DIR', './data/uploads')
+    OUTPUT_FOLDER = os.getenv('OUTPUT_DIR', './data/outputs')
+    CACHE_FOLDER = os.getenv('CACHE_DIR', './data/cache')
+    LOG_FOLDER = os.getenv('LOG_DIR', './logs')
 MAX_VIDEO_DURATION = int(os.getenv('MAX_VIDEO_DURATION', '7200'))  # 2時間
 AUDIO_QUALITY = int(os.getenv('AUDIO_QUALITY', '128'))
 
@@ -82,11 +173,14 @@ summarization_service = SummarizationService()
 active_sessions = {}
 
 @app.route('/')
+@require_auth
 def index():
     """メインページ"""
+    logger.info(f"[INDEX] SUBFOLDER_PATH: {SUBFOLDER_PATH}")
     return render_template('index.html', 
                          app_name=APP_NAME, 
-                         app_version=APP_VERSION)
+                         app_version=APP_VERSION,
+                         subfolder_path=SUBFOLDER_PATH)
 
 @app.route('/health')
 def health():
@@ -98,6 +192,7 @@ def health():
     })
 
 @app.route('/api/youtube/process', methods=['POST'])
+@require_auth
 def process_youtube():
     """YouTube動画処理開始"""
     try:
@@ -144,6 +239,7 @@ def process_youtube():
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/youtube/status/<session_id>')
+@require_auth
 def get_status(session_id):
     """処理状態取得"""
     if session_id not in active_sessions:
@@ -159,6 +255,7 @@ def get_status(session_id):
     })
 
 @app.route('/api/youtube/result/<session_id>')
+@require_auth
 def get_result(session_id):
     """処理結果取得"""
     if session_id not in active_sessions:
@@ -171,6 +268,7 @@ def get_result(session_id):
     return jsonify(session.get('result', {}))
 
 @app.route('/api/youtube/download/<session_id>')
+@require_auth
 def download_markdown(session_id):
     """マークダウンファイルダウンロード"""
     if session_id not in active_sessions:
@@ -242,8 +340,16 @@ def process_youtube_async(session_id, youtube_url, save_to_notion, summary_lengt
         
         # 4. 文字起こし
         update_progress(session_id, 50, 'transcription', '文字起こし中...')
-        transcript = summarization_service.transcribe_audio(audio_path)
-        session['transcript'] = transcript
+        try:
+            transcript = summarization_service.transcribe_audio(audio_path)
+            session['transcript'] = transcript
+        except Exception as e:
+            error_msg = str(e)
+            # エラーメッセージが既に日次クォータ超過を含む場合は、元のエラーをそのまま使用
+            if "Gemini APIの無料枠リミット" in error_msg or "日次クォータ超過" in error_msg:
+                raise e
+            # その他のエラーの場合は「文字起こしに失敗しました」を追加
+            raise Exception(f"文字起こしに失敗しました: {error_msg}")
         
         # 5. 要約生成
         update_progress(session_id, 70, 'summarizing', '要約生成中...')

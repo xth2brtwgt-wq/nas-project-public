@@ -4,9 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ app_name }} - YouTube動画要約システム</title>
+    <link rel="icon" href="{{ subfolder_path }}/static/favicon.svg" type="image/svg+xml">
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <!-- Socket.IO -->
@@ -19,19 +22,19 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
+        /* 固定ヘッダー */
+        .navbar {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
         .main-container {
             background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
             backdrop-filter: blur(10px);
-        }
-        
-        .header {
-            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
-            color: white;
-            border-radius: 20px 20px 0 0;
-            padding: 2rem;
-            text-align: center;
         }
         
         .form-container {
@@ -180,20 +183,21 @@
     </style>
 </head>
 <body>
-    <div class="container mt-5">
+    <nav class="navbar navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a href="https://yoshi-nas-sys.duckdns.org:8443/" class="navbar-brand mb-0 h1 text-white text-decoration-none" title="ダッシュボードに戻る" style="display: flex; align-items: center;">
+                <i class="fas fa-arrow-left me-2" style="font-size: 1.2em;"></i><span>🎬 {{ app_name }}</span>
+            </a>
+            <span class="navbar-text text-white">
+                <small>v{{ app_version }}</small>
+            </span>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
         <div class="row justify-content-center">
             <div class="col-lg-8">
                 <div class="main-container">
-                    <!-- ヘッダー -->
-                    <div class="header">
-                        <h1 class="mb-2">
-                            <i class="bi bi-youtube me-2"></i>
-                            {{ app_name }}
-                        </h1>
-                        <p class="mb-0">YouTube動画を自動要約してNotionに保存</p>
-                        <small class="opacity-75">v{{ app_version }}</small>
-                    </div>
-                    
                     <!-- メインフォーム -->
                     <div class="form-container">
                         <form id="youtubeForm">
@@ -325,8 +329,15 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
+        // サブフォルダパスをJavaScriptに渡す
+        window.SUBFOLDER_PATH = '{{ subfolder_path }}';
+        
         // Socket.IO接続
-        const socket = io();
+        const subfolderPath = window.SUBFOLDER_PATH || '';
+        const socketPath = subfolderPath ? `${subfolderPath}/socket.io` : '/socket.io';
+        const socket = io({
+            path: socketPath
+        });
         let currentSessionId = null;
         
         // フォーム送信
@@ -351,8 +362,14 @@
             document.getElementById('submitBtn').disabled = true;
             document.getElementById('submitBtn').innerHTML = '<span class="loading-spinner me-2"></span>処理中...';
             
+            // APIエンドポイントのパスを生成するヘルパー関数
+            function apiPath(path) {
+                const apiPath = path.startsWith('/') ? path : `/${path}`;
+                return `${subfolderPath}${apiPath}`;
+            }
+            
             // API呼び出し
-            fetch('/api/youtube/process', {
+            fetch(apiPath('/api/youtube/process'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -407,7 +424,7 @@
             document.getElementById('downloadBtn').onclick = () => {
                 if (currentSessionId) {
                     // マークダウンファイルをダウンロード
-                    const downloadUrl = `/api/youtube/download/${currentSessionId}`;
+                    const downloadUrl = apiPath(`/api/youtube/download/${currentSessionId}`);
                     const link = document.createElement('a');
                     link.href = downloadUrl;
                     link.download = '';

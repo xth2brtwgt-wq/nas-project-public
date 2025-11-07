@@ -4,7 +4,7 @@ Amazon Purchase Analytics System - バージョン管理
 from datetime import datetime
 
 # バージョン情報
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 VERSION_NAME = "初期リリース版"
 RELEASE_DATE = "2025-10-21"
 BUILD_NUMBER = 1
@@ -25,6 +25,13 @@ FEATURES = [
 
 # バージョン履歴
 VERSION_HISTORY = [
+    {
+        "version": "1.0.1",
+        "date": "2025-11-07",
+        "changes": [
+            "fix: ESLintエラーを修正（confirmをwindow.confirmに変更）"
+        ]
+    },
     {
         "version": "1.0.0",
         "date": "2025-10-21",
