@@ -5,10 +5,10 @@ services:
     container_name: insta360-auto-sync
     user: root
     volumes:
-      - /home/AdminUser/nas-project-data/insta360-auto-sync/logs:/app/logs
+      - ~/nas-project-data/insta360-auto-sync/logs:/app/logs
       - ./config:/app/config
-      - /home/AdminUser/nas-project-data/insta360-auto-sync/insta360:/volume2/data/insta360
-      - /home/AdminUser/nas-project-data/insta360-auto-sync/source:/source
+      - ~/nas-project-data/insta360-auto-sync/insta360:/volume2/data/insta360
+      - /mnt/mac-share:/source  # Mac側の共有フォルダマウントポイント
     env_file:
       - .env
     environment:

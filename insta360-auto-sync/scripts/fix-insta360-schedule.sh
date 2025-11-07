@@ -364,7 +364,7 @@ services:
       - /volume2/data/insta360:/volume2/data/insta360
       - /mnt/mac-share:/source
     env_file:
-      - env.local
+      - .env
     environment:
       - TZ=Asia/Tokyo
       - DEBUG=false

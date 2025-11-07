@@ -20,8 +20,8 @@
     "delete_empty_dirs": true
   },
   "mac": {
-    "ip_address": "192.168.68.88",
-    "username": "Admin",
+    "ip_address": "YOUR_MAC_IP_ADDRESS",
+    "username": "YOUR_MAC_USERNAME",
     "password": "",
     "share_name": "Insta360"
   },

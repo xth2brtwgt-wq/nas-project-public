@@ -30,14 +30,21 @@ fi
 
 # 必要なディレクトリを作成
 echo -e "${YELLOW}📁 必要なディレクトリを作成中...${NC}"
-mkdir -p /home/YOUR_USERNAME/nas-project-data/insta360-auto-sync/insta360
-mkdir -p /home/YOUR_USERNAME/nas-project-data/insta360-auto-sync/source
-mkdir -p /home/YOUR_USERNAME/nas-project-data/insta360-auto-sync/logs
+mkdir -p ~/nas-project-data/insta360-auto-sync/insta360
+mkdir -p ~/nas-project-data/insta360-auto-sync/source
+mkdir -p ~/nas-project-data/insta360-auto-sync/logs
 
 # 権限設定
 echo -e "${YELLOW}🔐 権限を設定中...${NC}"
-chmod -R 755 /home/YOUR_USERNAME/nas-project-data/insta360-auto-sync/
-chown -R YOUR_USERNAME:users /home/YOUR_USERNAME/nas-project-data/insta360-auto-sync/
+chmod -R 755 ~/nas-project-data/insta360-auto-sync/
+# 注意: 実際のユーザー名とグループ名に置き換えてください
+# chown -R YOUR_USERNAME:YOUR_GROUP ~/nas-project-data/insta360-auto-sync/
+if [ -n "${NAS_USER:-}" ] && [ -n "${NAS_GROUP:-}" ]; then
+    chown -R "${NAS_USER}:${NAS_GROUP}" ~/nas-project-data/insta360-auto-sync/
+else
+    echo -e "${YELLOW}⚠️  環境変数 NAS_USER と NAS_GROUP が設定されていません${NC}"
+    echo "   権限設定をスキップします。必要に応じて手動で設定してください"
+fi
 
 # Dockerネットワークの作成
 echo -e "${YELLOW}🌐 Dockerネットワークを作成中...${NC}"
@@ -73,7 +80,7 @@ if docker compose ps | grep -q "Up"; then
     echo "  - スケジュール: 毎日 00:00 に実行"
     echo "  - ソースパス: /source"
     echo "  - 転送先パス: /volume2/data/insta360"
-    echo "  - ログファイル: /home/YOUR_USERNAME/insta360-auto-sync-data/logs/"
+    echo "  - ログファイル: ~/insta360-auto-sync-data/logs/"
     echo ""
     echo -e "${GREEN}🎉 デプロイが完了しました！${NC}"
 else

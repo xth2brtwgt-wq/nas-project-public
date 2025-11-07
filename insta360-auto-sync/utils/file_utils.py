@@ -29,26 +29,51 @@ class FileManager:
             return files
         
         try:
+            # ソースパス配下の全ファイル数を確認（デバッグ用）
+            total_files = 0
+            matched_files = []
+            unmatched_files = []
+            
             # ソースパス配下を再帰的に検索
             for root, dirs, filenames in os.walk(self.source_path):
                 for filename in filenames:
+                    total_files += 1
+                    file_path = Path(root) / filename
+                    
                     if self._matches_pattern(filename):
-                        file_path = Path(root) / filename
+                        matched_files.append(str(file_path))
                         file_info = self._get_file_info(file_path)
                         if file_info:
                             files.append(file_info)
+                    else:
+                        unmatched_files.append(str(file_path))
+            
+            # デバッグ情報を出力
+            logger.info(f"ソースパス: {self.source_path}")
+            logger.info(f"検索対象ファイルパターン: {self.file_patterns}")
+            logger.info(f"総ファイル数: {total_files}")
+            logger.info(f"パターン一致ファイル数: {len(files)}")
+            
+            if total_files > 0 and len(files) == 0:
+                logger.warning(f"ファイルが {total_files} 件見つかりましたが、パターンに一致するファイルがありませんでした")
+                logger.info(f"最初の10件のファイル名: {[Path(f).name for f in unmatched_files[:10]]}")
+            elif total_files == 0:
+                logger.warning(f"ソースパス内にファイルが見つかりませんでした: {self.source_path}")
+                logger.info("Mac側の共有フォルダにファイルが存在するか、マウントが正しく機能しているか確認してください")
             
             logger.info(f"Insta360ファイルを {len(files)} 件発見しました")
             return files
             
         except Exception as e:
-            logger.error(f"ファイル検索エラー: {e}")
+            logger.error(f"ファイル検索エラー: {e}", exc_info=True)
             return []
     
     def _matches_pattern(self, filename: str) -> bool:
         """ファイル名がパターンにマッチするかチェック"""
+        filename_lower = filename.lower()
         for pattern in self.file_patterns:
-            if fnmatch.fnmatch(filename, pattern):
+            # パターンマッチング（大文字小文字を区別しない）
+            if fnmatch.fnmatch(filename, pattern) or fnmatch.fnmatch(filename_lower, pattern.lower()):
                 return True
         return False
     
