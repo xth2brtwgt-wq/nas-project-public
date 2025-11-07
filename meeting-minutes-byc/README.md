@@ -1,6 +1,6 @@
 # Meeting Minutes BYC - 音声文字起こし・議事録生成アプリケーション
 
-**バージョン**: v1.1.0 (config/version.pyで一元管理)
+**バージョン**: v1.8.2 (config/version.pyで一元管理)
 
 ## 📋 概要
 
