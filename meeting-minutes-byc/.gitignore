@@ -67,3 +67,9 @@ config/*.bak
 
 # Google credentials (if any)
 google-credentials.json
+credentials.json
+token.json
+
+# Generated files (saved to external directory in NAS environment)
+transcripts/
+uploads/

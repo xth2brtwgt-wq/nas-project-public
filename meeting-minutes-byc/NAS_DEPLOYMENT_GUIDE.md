@@ -15,12 +15,12 @@ Meeting Minutes BYC（議事録作成システム）をNAS環境にデプロイ�
 
 ### 1. NASに接続
 ```bash
-ssh YOUR_USERNAME@YOUR_NAS_IP
+ssh -p 23456 YOUR_USERNAME@YOUR_IP_ADDRESS110
 ```
 
 ### 2. プロジェクトディレクトリに移動
 ```bash
-cd /home/YOUR_USERNAME/nas-project/meeting-minutes-byc
+cd ~/nas-project/meeting-minutes-byc
 ```
 
 ### 3. 最新のコードを取得
@@ -74,9 +74,9 @@ chmod +x deploy-nas.sh
 
 デプロイ完了後、以下のURLでアクセスできます：
 
-- **議事録作成システム**: http://YOUR_NAS_IP:5002
-- **ヘルスチェック**: http://YOUR_NAS_IP:5002/health
-- **統合管理ダッシュボード**: http://YOUR_NAS_IP:9001
+- **議事録作成システム**: http://YOUR_IP_ADDRESS110:5002
+- **ヘルスチェック**: http://YOUR_IP_ADDRESS110:5002/health
+- **統合管理ダッシュボード**: http://YOUR_IP_ADDRESS110:9001
 
 ## 🔧 管理コマンド
 
@@ -101,16 +101,16 @@ curl http://localhost:5000/health
 ### データ管理
 ```bash
 # アップロードファイル確認
-ls -la /home/YOUR_USERNAME/meeting-minutes-data/uploads/
+ls -la ~/meeting-minutes-data/uploads/
 
 # 議事録ファイル確認
-ls -la /home/YOUR_USERNAME/meeting-minutes-data/transcripts/
+ls -la ~/meeting-minutes-data/transcripts/
 
 # テンプレートファイル確認
-ls -la /home/YOUR_USERNAME/meeting-minutes-data/templates/
+ls -la ~/meeting-minutes-data/templates/
 
 # ログファイル確認
-ls -la /home/YOUR_USERNAME/meeting-minutes-data/logs/
+ls -la ~/meeting-minutes-data/logs/
 ```
 
 ## 🆕 新機能: テンプレート管理
@@ -152,22 +152,22 @@ sudo ufw status
 docker logs -f meeting-minutes-byc
 
 # ログファイルの確認
-tail -f /home/YOUR_USERNAME/meeting-minutes-data/logs/app.log
+tail -f ~/meeting-minutes-data/logs/app.log
 ```
 
 ### ディスク使用量監視
 ```bash
 # データディレクトリの使用量確認
-du -sh /home/YOUR_USERNAME/meeting-minutes-data/*
+du -sh ~/meeting-minutes-data/*
 
 # 古いファイルのクリーンアップ
-find /home/YOUR_USERNAME/meeting-minutes-data/uploads -type f -mtime +7 -delete
+find ~/meeting-minutes-data/uploads -type f -mtime +7 -delete
 ```
 
 ### バックアップ
 ```bash
 # データバックアップ
-tar -czf meeting-minutes-backup-$(date +%Y%m%d).tar.gz /home/YOUR_USERNAME/meeting-minutes-data/
+tar -czf meeting-minutes-backup-$(date +%Y%m%d).tar.gz ~/meeting-minutes-data/
 
 # 設定ファイルバックアップ
 cp env.production meeting-minutes-config-$(date +%Y%m%d).backup
@@ -218,10 +218,10 @@ export $(grep -v '^#' env.production | xargs)
 #### 3. ファイルアップロードエラー
 ```bash
 # ディレクトリ権限を確認
-ls -la /home/YOUR_USERNAME/meeting-minutes-data/
+ls -la ~/meeting-minutes-data/
 
 # 権限を修正
-chmod 755 /home/YOUR_USERNAME/meeting-minutes-data/uploads
+chmod 755 ~/meeting-minutes-data/uploads
 ```
 
 #### 4. メール送信エラー
@@ -244,7 +244,7 @@ curl -X POST http://localhost:5000/test-email
 
 ## 🎉 デプロイ完了後の確認事項
 
-- [ ] ブラウザで http://YOUR_NAS_IP:5002 にアクセス可能
+- [ ] ブラウザで http://YOUR_IP_ADDRESS110:5002 にアクセス可能
 - [ ] テンプレート選択ドロップダウンが表示される
 - [ ] テンプレート管理画面が開ける
 - [ ] 音声ファイルのアップロードが可能

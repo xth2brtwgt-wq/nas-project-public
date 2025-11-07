@@ -13,22 +13,22 @@ from pathlib import Path
 
 def get_current_version():
     """現在のバージョンを取得"""
-    version_file = Path(__file__).parent.parent / "version.py"
+    version_file = Path(__file__).parent.parent / "config" / "version.py"
     if not version_file.exists():
         return None
     
     with open(version_file, 'r', encoding='utf-8') as f:
         content = f.read()
     
-    # バージョン番号を抽出
-    version_match = re.search(r'__version__ = "([^"]+)"', content)
+    # バージョン番号を抽出（APP_VERSION形式）
+    version_match = re.search(r'APP_VERSION = "([^"]+)"', content)
     if version_match:
         return version_match.group(1)
     return None
 
 def update_version(version_type="patch"):
     """バージョンを更新"""
-    version_file = Path(__file__).parent.parent / "version.py"
+    version_file = Path(__file__).parent.parent / "config" / "version.py"
     
     if not version_file.exists():
         print("❌ version.py が見つかりません")
@@ -37,8 +37,8 @@ def update_version(version_type="patch"):
     with open(version_file, 'r', encoding='utf-8') as f:
         content = f.read()
     
-    # 現在のバージョンを取得
-    version_match = re.search(r'__version__ = "([^"]+)"', content)
+    # 現在のバージョンを取得（APP_VERSION形式）
+    version_match = re.search(r'APP_VERSION = "([^"]+)"', content)
     if not version_match:
         print("❌ バージョン情報を取得できません")
         return False
@@ -58,26 +58,24 @@ def update_version(version_type="patch"):
         patch += 1
     
     new_version = f"{major}.{minor}.{patch}"
-    new_build_date = datetime.now().strftime("%Y-%m-%d")
     
-    # バージョン情報を更新
-    content = re.sub(r'__version__ = "[^"]+"', f'__version__ = "{new_version}"', content)
-    content = re.sub(r'__version_info__ = \([^)]+\)', f'__version_info__ = ({major}, {minor}, {patch})', content)
-    content = re.sub(r'__build_date__ = "[^"]+"', f'__build_date__ = "{new_build_date}"', content)
+    # 最新のコミットメッセージを取得して変更内容を抽出
+    try:
+        result = subprocess.run(['git', 'log', '-1', '--pretty=%s'], 
+                              capture_output=True, text=True, check=True)
+        commit_msg = result.stdout.strip()
+    except:
+        commit_msg = f"自動バージョンアップ: {version_type} バージョン更新"
     
-    # バージョン履歴を更新
-    new_history_entry = f'''    {{
-        "version": "{new_version}",
-        "date": "{new_build_date}",
-        "changes": [
-            "自動バージョンアップ: {version_type} バージョン更新",
-            "ビルド日: {new_build_date}"
-        ]
-    }},'''
+    # APP_VERSIONを更新
+    content = re.sub(r'APP_VERSION = "[^"]+"', f'APP_VERSION = "{new_version}"', content)
+    
+    # VERSION_HISTORYに新しいエントリを追加（辞書形式）
+    new_history_entry = f'    "{new_version}": "{commit_msg}",'
     
     # VERSION_HISTORYの最初に新しいエントリを追加
-    history_pattern = r'(VERSION_HISTORY = \[\s*)(\{)'
-    content = re.sub(history_pattern, rf'\1{new_history_entry}\n    \2', content)
+    history_pattern = r'(VERSION_HISTORY = \{)'
+    content = re.sub(history_pattern, rf'\1\n{new_history_entry}', content)
     
     # ファイルを更新
     with open(version_file, 'w', encoding='utf-8') as f:

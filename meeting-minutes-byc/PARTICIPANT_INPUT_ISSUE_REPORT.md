@@ -22,7 +22,7 @@ grep -A 5 -B 5 "participants" /Users/Yoshi/nas-project/meeting-minutes-byc/templ
 #### Step 2: NASローカルファイルの確認
 ```bash
 # NASのローカルファイルの確認
-grep -A 5 -B 5 "participants" /home/YOUR_USERNAME/nas-project/meeting-minutes-byc/templates/index.html
+grep -A 5 -B 5 "participants" ~/nas-project/meeting-minutes-byc/templates/index.html
 ```
 **結果**: ✅ **正常** - 参加者フィールドが存在
 
@@ -147,12 +147,12 @@ ls -la templates/index.html
 ```yaml
 # docker-compose.yml
 volumes:
-  - /home/YOUR_USERNAME/meeting-minutes-data/templates:/app/templates
+  - ~/meeting-minutes-data/templates:/app/templates
 ```
 
 **問題のメカニズム:**
 1. Dockerコンテナ内の`/app/templates`ディレクトリが外部ディレクトリにマウント
-2. 外部ディレクトリ（`/home/YOUR_USERNAME/meeting-minutes-data/templates/`）に古いファイルが存在
+2. 外部ディレクトリ（`~/meeting-minutes-data/templates/`）に古いファイルが存在
 3. マウントにより、新しいファイルが古いファイルで上書きされる
 
 ### 原因2: Dockerビルドキャッシュ
@@ -167,19 +167,19 @@ volumes:
 
 ```bash
 # 1. 古いtemplatesディレクトリの内容確認
-ls -la /home/YOUR_USERNAME/meeting-minutes-data/templates/
+ls -la ~/meeting-minutes-data/templates/
 
 # 2. 古いtemplatesディレクトリを削除
-rm -rf /home/YOUR_USERNAME/meeting-minutes-data/templates/
+rm -rf ~/meeting-minutes-data/templates/
 
 # 3. 新しいtemplatesディレクトリを作成
-mkdir -p /home/YOUR_USERNAME/meeting-minutes-data/templates/
+mkdir -p ~/meeting-minutes-data/templates/
 
 # 4. 最新のtemplatesファイルをコピー
-cp /home/YOUR_USERNAME/nas-project/meeting-minutes-byc/templates/* /home/YOUR_USERNAME/meeting-minutes-data/templates/
+cp ~/nas-project/meeting-minutes-byc/templates/* ~/meeting-minutes-data/templates/
 
 # 5. 確認
-cat /home/YOUR_USERNAME/meeting-minutes-data/templates/index.html | grep -A 5 -B 5 "participants"
+cat ~/meeting-minutes-data/templates/index.html | grep -A 5 -B 5 "participants"
 ```
 
 ### 解決手順2: Dockerコンテナの再起動
@@ -230,7 +230,7 @@ docker exec meeting-minutes-byc cat /app/templates/index.html | grep -A 5 -B 5 "
 git pull origin main
 
 # 2. ボリュームマウント先のファイルを更新
-cp templates/* /home/YOUR_USERNAME/meeting-minutes-data/templates/
+cp templates/* ~/meeting-minutes-data/templates/
 
 # 3. Dockerコンテナを再起動
 docker compose down

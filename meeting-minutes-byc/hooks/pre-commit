@@ -1,0 +1,33 @@
+#!/bin/bash
+"""
+自動バージョンアップ Git Hook
+コミット前に自動的にバージョンを更新する
+"""
+
+# スクリプトのパス
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+AUTO_VERSION_SCRIPT="$PROJECT_DIR/scripts/auto_version_update.py"
+
+# バージョンファイルが変更されている場合はスキップ
+if git diff --cached --name-only | grep -q "config/version.py"; then
+    echo "ℹ️  config/version.py が既に変更されているため、自動バージョンアップをスキップします"
+    exit 0
+fi
+
+# 自動バージョンアップを実行
+if [ -f "$AUTO_VERSION_SCRIPT" ]; then
+    echo "🔄 自動バージョンアップを実行中..."
+    python3 "$AUTO_VERSION_SCRIPT"
+    
+    # バージョンファイルが更新された場合はステージングに追加
+    if git diff --name-only | grep -q "config/version.py"; then
+        echo "📝 更新されたバージョンファイルをステージングに追加します"
+        git add config/version.py
+    fi
+else
+    echo "⚠️  自動バージョンアップスクリプトが見つかりません: $AUTO_VERSION_SCRIPT"
+fi
+
+exit 0
+

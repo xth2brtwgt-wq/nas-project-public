@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   meeting-minutes-byc:
     build: .
@@ -9,11 +7,14 @@ services:
       - "5002:5000"
     volumes:
       # ローカル環境用のマウント設定
-      - /home/AdminUser/nas-project-data/meeting-minutes-byc/uploads:/app/uploads
-      - /home/AdminUser/nas-project-data/meeting-minutes-byc/transcripts:/app/transcripts
-      - /home/AdminUser/nas-project-data/meeting-minutes-byc/logs:/app/logs
+      - ~/nas-project-data/meeting-minutes-byc/uploads:/app/uploads
+      - ~/nas-project-data/meeting-minutes-byc/transcripts:/app/transcripts
+      - ~/nas-project-data/meeting-minutes-byc/logs:/app/logs
+      # 認証データベースのマウント（読み取り専用）
+      - ~/nas-project-data:/nas-project-data:ro
+      # nas-dashboardのutilsディレクトリへのアクセス（認証モジュール用）
+      - ~/nas-project/nas-dashboard:/nas-project/nas-dashboard:ro
     env_file:
-      - .env.local
       - .env
     environment:
       - FLASK_ENV=production
@@ -24,6 +25,8 @@ services:
       - HOST=0.0.0.0
       - PORT=5000
       - TZ=Asia/Tokyo
+      - NAS_MODE=true
+      - SUBFOLDER_PATH=/meetings
     restart: unless-stopped
     labels:
       - "com.docker.compose.project=meeting-minutes-byc"

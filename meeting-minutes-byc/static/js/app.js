@@ -4,7 +4,18 @@ class MeetingMinutesApp {
         this.currentFile = null;
         this.socket = null;
         this.sessionId = null;
+        // サブフォルダパスを取得（window.SUBFOLDER_PATHが設定されている場合）
+        this.subfolderPath = window.SUBFOLDER_PATH || '';
+        // 処理中フラグ（重複実行防止）
+        this.isProcessing = false;
         this.init();
+    }
+    
+    // APIエンドポイントのパスを生成するヘルパーメソッド
+    apiPath(path) {
+        // pathが既にスラッシュで始まっていることを確認
+        const apiPath = path.startsWith('/') ? path : `/${path}`;
+        return `${this.subfolderPath}${apiPath}`;
     }
     
     init() {
@@ -21,7 +32,12 @@ class MeetingMinutesApp {
     initWebSocket() {
         // WebSocket接続を初期化
         console.log('WebSocket接続を初期化しています...');
-        this.socket = io();
+        // サブフォルダパスを取得（window.SUBFOLDER_PATHが設定されている場合）
+        const subfolderPath = window.SUBFOLDER_PATH || '';
+        const socketPath = subfolderPath ? `${subfolderPath}/socket.io` : '/socket.io';
+        this.socket = io({
+            path: socketPath
+        });
         
             this.socket.on('connect', () => {
                 console.log('✅ WebSocket接続が確立されました - Session ID:', this.socket.id);
@@ -286,14 +302,39 @@ class MeetingMinutesApp {
     
     setupEventListeners() {
         // ファイル選択
-        document.getElementById('audioFile').addEventListener('change', (e) => {
-            this.handleFileSelect(e.target.files[0]);
-        });
+        const audioFileInput = document.getElementById('audioFile');
+        if (audioFileInput) {
+            audioFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    console.log('ファイル選択イベント発火:', file.name);
+                    this.handleFileSelect(file);
+                } else {
+                    console.log('ファイルが選択されていません');
+                }
+            });
+            
+            // スマホ対応: inputイベントも追加（iOS対応）
+            audioFileInput.addEventListener('input', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    console.log('ファイル入力イベント発火:', file.name);
+                    this.handleFileSelect(file);
+                }
+            });
+        } else {
+            console.error('audioFile要素が見つかりません');
+        }
         
         // ファイル処理
-        document.getElementById('processFile').addEventListener('click', () => {
-            this.processFile();
-        });
+        const processBtn = document.getElementById('processFile');
+        if (processBtn) {
+            processBtn.addEventListener('click', () => {
+                this.processFile();
+            });
+        } else {
+            console.error('processFile要素が見つかりません');
+        }
     }
     
     setupDragAndDrop() {
@@ -318,8 +359,14 @@ class MeetingMinutesApp {
             }
         });
         
-        uploadArea.addEventListener('click', () => {
-            document.getElementById('audioFile').click();
+        uploadArea.addEventListener('click', (e) => {
+            // ボタン以外のクリックでファイル選択を開く
+            if (e.target.tagName !== 'BUTTON') {
+                const audioFileInput = document.getElementById('audioFile');
+                if (audioFileInput) {
+                    audioFileInput.click();
+                }
+            }
         });
     }
     
@@ -412,12 +459,21 @@ class MeetingMinutesApp {
         fileName.textContent = `ファイル名: ${file.name}`;
         fileSize.textContent = `サイズ: ${this.formatFileSize(file.size)}`;
         
+        // スマホ対応: より確実な表示方法
         fileInfo.style.display = 'block';
+        fileInfo.style.visibility = 'visible';
+        fileInfo.classList.remove('hidden');
+        fileInfo.classList.add('visible');
+        
+        // スクロールして表示されるようにする
+        fileInfo.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         
         console.log('ファイル情報表示完了:', {
             fileName: file.name,
             fileSize: this.formatFileSize(file.size),
-            fileInfoDisplay: fileInfo.style.display
+            fileInfoDisplay: fileInfo.style.display,
+            fileInfoVisibility: fileInfo.style.visibility,
+            fileInfoClasses: fileInfo.className
         });
     }
     
@@ -430,10 +486,22 @@ class MeetingMinutesApp {
     }
     
     async processFile() {
+        // 重複実行防止
+        if (this.isProcessing) {
+            console.log('処理は既に実行中です。');
+            return;
+        }
+        
         if (!this.currentFile) {
             alert('ファイルが選択されていません。');
             return;
         }
+        
+        // 処理中フラグを設定
+        this.isProcessing = true;
+        
+        // ボタンを無効化
+        this.disableButtons();
         
         // ボタン押下時に即座にメッセージを表示
         this.showProcessingMessage();
@@ -448,6 +516,7 @@ class MeetingMinutesApp {
             const conditions = document.getElementById('conditions').value;
             const email = document.getElementById('email').value;
             const templateId = document.getElementById('templateSelect').value;
+            const saveToObsidian = document.getElementById('saveToObsidian').checked;
             
             if (meetingDate) formData.append('meeting_date', meetingDate);
             if (participants) formData.append('participants', participants);
@@ -458,14 +527,32 @@ class MeetingMinutesApp {
             // Notion登録は常に実行
             formData.append('send_to_notion', 'true');
             
-            const response = await fetch('/upload', {
+            // Obsidian保存
+            formData.append('save_to_obsidian', saveToObsidian ? 'true' : 'false');
+            
+            const response = await fetch(this.apiPath('/upload'), {
                 method: 'POST',
                 body: formData
             });
             
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'サーバーエラーが発生しました');
+                let errorMessage = `サーバーエラーが発生しました (ステータス: ${response.status})`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorMessage;
+                } catch (jsonError) {
+                    // JSON形式でない場合はテキストとして読み取る
+                    try {
+                        const errorText = await response.text();
+                        if (errorText) {
+                            errorMessage = `サーバーエラー: ${errorText.substring(0, 200)}`;
+                        }
+                    } catch (textError) {
+                        // テキストも読み取れない場合はデフォルトメッセージを使用
+                        errorMessage = `サーバーエラーが発生しました (ステータス: ${response.status} ${response.statusText})`;
+                    }
+                }
+                throw new Error(errorMessage);
             }
             
             const result = await response.json();
@@ -476,6 +563,9 @@ class MeetingMinutesApp {
             alert('エラーが発生しました: ' + error.message);
             this.hideProcessingMessage();
             this.enableButtons();
+        } finally {
+            // 処理完了後にフラグをリセット
+            this.isProcessing = false;
         }
     }
     
@@ -529,6 +619,9 @@ class MeetingMinutesApp {
         // Notion登録ステータスの表示
         this.updateNotionStatus(result);
         
+        // Obsidian保存ステータスの表示
+        this.updateObsidianStatus(result);
+        
         // 結果をローカルストレージに保存
         localStorage.setItem('lastResult', JSON.stringify(result));
         
@@ -572,7 +665,7 @@ class MeetingMinutesApp {
     checkEmailStatus() {
         // 5秒後にメール送信状況をチェック
         setTimeout(() => {
-            fetch('/api/email-status')
+            fetch(this.apiPath('/api/email-status'))
                 .then(response => response.json())
                 .then(data => {
                     const emailStatusValue = document.getElementById('emailStatusValue');
@@ -609,6 +702,33 @@ class MeetingMinutesApp {
             notionStatusValue.innerHTML = `<span style="color: orange;">⚠️ 登録: 未実行</span>`;
         } else {
             notionStatusValue.innerHTML = `<span style="color: gray;">❓ 不明</span>`;
+        }
+    }
+    
+    updateObsidianStatus(result) {
+        const obsidianStatus = document.getElementById('obsidianStatus');
+        const obsidianStatusValue = document.getElementById('obsidianStatusValue');
+        if (!obsidianStatus || !obsidianStatusValue) return;
+        
+        const obsidianSaved = result.obsidian_saved;
+        const obsidianError = result.obsidian_error;
+        const googleDriveFileId = result.google_drive_file_id;
+        
+        // Google Drive保存が実行された場合のみ表示
+        if (obsidianSaved !== undefined) {
+            obsidianStatus.style.display = 'block';
+            
+            if (obsidianSaved === true && googleDriveFileId) {
+                obsidianStatusValue.innerHTML = `<span style="color: green;">✅ 保存完了</span>`;
+            } else if (obsidianSaved === false && obsidianError) {
+                obsidianStatusValue.innerHTML = `<span style="color: red;">❌ 保存失敗: ${obsidianError}</span>`;
+            } else if (obsidianSaved === false) {
+                obsidianStatusValue.innerHTML = `<span style="color: orange;">⚠️ 保存: 未実行</span>`;
+            } else {
+                obsidianStatusValue.innerHTML = `<span style="color: gray;">❓ 不明</span>`;
+            }
+        } else {
+            obsidianStatus.style.display = 'none';
         }
     }
     
@@ -692,7 +812,7 @@ class MeetingMinutesApp {
 
     async loadDictionaryData() {
         try {
-            const response = await fetch('/api/dictionary');
+            const response = await fetch(this.apiPath('/api/dictionary'));
             const data = await response.json();
 
             if (data.success) {
@@ -762,7 +882,7 @@ class MeetingMinutesApp {
         }
 
         try {
-            const response = await fetch(`/api/dictionary/search?q=${encodeURIComponent(query)}`);
+            const response = await fetch(this.apiPath(`/api/dictionary/search?q=${encodeURIComponent(query)}`));
             const data = await response.json();
 
             if (data.success) {
@@ -811,7 +931,7 @@ class MeetingMinutesApp {
         }
 
         try {
-            const response = await fetch('/api/dictionary/entry', {
+            const response = await fetch(this.apiPath('/api/dictionary/entry'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -849,7 +969,7 @@ class MeetingMinutesApp {
         }
 
         try {
-            const response = await fetch('/api/dictionary/entry', {
+            const response = await fetch(this.apiPath('/api/dictionary/entry'), {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
@@ -939,7 +1059,7 @@ class MeetingMinutesApp {
 
     async loadTemplates() {
         try {
-            const response = await fetch('/api/templates');
+            const response = await fetch(this.apiPath('/api/templates'));
             const data = await response.json();
 
             if (data.success) {
@@ -1019,7 +1139,7 @@ class MeetingMinutesApp {
 
     async loadTemplateManagerData() {
         try {
-            const response = await fetch('/api/templates');
+            const response = await fetch(this.apiPath('/api/templates'));
             const data = await response.json();
 
             if (data.success) {
@@ -1056,7 +1176,7 @@ class MeetingMinutesApp {
 
     async selectTemplate(templateId) {
         try {
-            const response = await fetch(`/api/templates/${templateId}`);
+            const response = await fetch(this.apiPath(`/api/templates/${templateId}`));
             const data = await response.json();
 
             if (data.success) {
@@ -1123,7 +1243,7 @@ class MeetingMinutesApp {
         }
 
         try {
-            const response = await fetch('/api/templates', {
+            const response = await fetch(this.apiPath('/api/templates'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1154,7 +1274,7 @@ class MeetingMinutesApp {
 
     async editTemplate(templateId) {
         try {
-            const response = await fetch(`/api/templates/${templateId}`);
+            const response = await fetch(this.apiPath(`/api/templates/${templateId}`));
             const data = await response.json();
 
             if (data.success) {
@@ -1201,7 +1321,7 @@ class MeetingMinutesApp {
         }
 
         try {
-            const response = await fetch(`/api/templates/${templateId}`, {
+            const response = await fetch(this.apiPath(`/api/templates/${templateId}`), {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1235,7 +1355,7 @@ class MeetingMinutesApp {
         }
 
         try {
-            const response = await fetch(`/api/templates/${templateId}`, {
+            const response = await fetch(this.apiPath(`/api/templates/${templateId}`), {
                 method: 'DELETE'
             });
 
@@ -1263,7 +1383,7 @@ class MeetingMinutesApp {
         const templateId = this.currentEditingTemplate.id;
 
         try {
-            const response = await fetch(`/api/templates/${templateId}/default`, {
+            const response = await fetch(this.apiPath(`/api/templates/${templateId}/default`), {
                 method: 'POST'
             });
 

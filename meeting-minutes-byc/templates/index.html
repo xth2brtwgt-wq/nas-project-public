@@ -4,15 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meeting Minutes BYC - 音声文字起こし・議事録生成</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" href="{{ subfolder_path }}{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ subfolder_path }}{{ url_for('static', filename='css/style.css') }}">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>{{ app_name }} <span class="version">v{{ app_version }}</span></h1>
-            <p class="subtitle">音声ファイルの文字起こしと議事録自動生成</p>
-        </header>
+    <nav class="navbar navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a href="https://yoshi-nas-sys.duckdns.org:8443/" class="navbar-brand mb-0 h1 text-white text-decoration-none" title="ダッシュボードに戻る" style="display: flex; align-items: center;">
+                <i class="fas fa-arrow-left me-2" style="font-size: 1.2em;"></i><span>🎤 {{ app_name }}</span>
+            </a>
+            <span class="navbar-text text-white">
+                <small>v{{ app_version }}</small>
+            </span>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
 
         <main>
             <!-- ステータス表示 -->
@@ -42,7 +52,7 @@
             <!-- ファイルアップロード -->
             <div class="card" id="uploadCard">
                 <div class="card-header">
-                    <h2>🎤 音声ファイルアップロード</h2>
+                    <h2>🎤 議事録作成システム</h2>
                     <div class="header-buttons">
                         <button id="openTemplateManager" class="btn btn-outline-primary">📝 テンプレート管理</button>
                         <button id="openDictionary" class="btn btn-outline-secondary">📚 辞書管理</button>
@@ -52,16 +62,18 @@
                 <!-- 会議情報入力 -->
                 <div class="form-section">
                     <h3>📅 会議情報</h3>
-                    <div class="form-group">
-                        <label for="meetingDate">会議日時: <span style="color: red;">*</span></label>
-                        <input type="datetime-local" id="meetingDate" name="meeting_date" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="templateSelect">議事録テンプレート:</label>
-                        <select id="templateSelect" name="template_id" class="form-control">
-                            <option value="">読み込み中...</option>
-                        </select>
-                        <small class="form-text text-muted">使用する議事録テンプレートを選択してください</small>
+                    <div class="meeting-info-row">
+                        <div class="form-group">
+                            <label for="meetingDate">会議日時: <span style="color: red;">*</span></label>
+                            <input type="datetime-local" id="meetingDate" name="meeting_date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="templateSelect">議事録テンプレート:</label>
+                            <select id="templateSelect" name="template_id" class="form-control">
+                                <option value="">読み込み中...</option>
+                            </select>
+                            <small class="form-text text-muted">使用する議事録テンプレートを選択してください</small>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="participants">参加者 (任意):</label>
@@ -81,6 +93,15 @@
                         <label for="email">メールアドレス (任意):</label>
                         <input type="email" id="email" name="email" value="{{ default_email }}" placeholder="議事録をメールで送信">
                     </div>
+                    <div class="form-group">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="saveToObsidian" name="save_to_obsidian" style="width: 18px; height: 18px; margin-top: 0.25rem;">
+                            <label class="form-check-label" for="saveToObsidian" style="margin-left: 0.5rem; font-size: 1rem;">
+                                📝 Google Drive（Obsidian Vault）に保存する
+                            </label>
+                            <small class="form-text text-muted d-block" style="margin-left: 1.75rem; margin-top: 0.25rem;">※ 現在試運用中です</small>
+                        </div>
+                    </div>
                 </div>
 
 
@@ -88,7 +109,7 @@
                 <div class="upload-area" id="uploadArea">
                     <div class="upload-icon">📁</div>
                     <p>音声ファイルをドラッグ&ドロップまたはクリックして選択</p>
-                    <input type="file" id="audioFile" accept="audio/*" style="display: none;">
+                    <input type="file" id="audioFile" accept="audio/*,.m4a,.mp3,.wav,.flac,.ogg,.webm,audio/mp4,audio/m4a,audio/x-m4a,audio/mpeg,audio/mp3,audio/wav,audio/flac,audio/ogg,audio/webm" style="display: none;">
                     <button class="btn btn-secondary" onclick="document.getElementById('audioFile').click()">ファイルを選択</button>
                 </div>
                 <div class="file-info" id="fileInfo" style="display: none;">
@@ -267,6 +288,10 @@
                             <span class="status-label">📄 Notion登録:</span>
                             <span class="status-value" id="notionStatusValue">確認中...</span>
                         </div>
+                        <div id="obsidianStatus" class="status-item" style="display: none;">
+                            <span class="status-label">📝 Google Drive（Obsidian Vault）保存:</span>
+                            <span class="status-value" id="obsidianStatusValue">確認中...</span>
+                        </div>
                     </div>
                 </div>
 
@@ -290,6 +315,10 @@
         </footer>
     </div>
 
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+        // サブフォルダパスをJavaScriptに渡す
+        window.SUBFOLDER_PATH = '{{ subfolder_path }}';
+    </script>
+    <script src="{{ subfolder_path }}{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
